@@ -1,0 +1,12 @@
+[package]
+name = "tracker"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+winapi = { version = "0.3.9", features = ["psapi", "processthreadsapi", "handleapi", "memoryapi"] }
+serde_json = "1.0.59"
+serde = "1.0.117"
+serde_derive = "1.0.117"
