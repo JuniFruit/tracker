@@ -1,6 +1,11 @@
-use eframe::egui::Ui;
+use eframe::egui::{Ui, Widget};
 
-use super::app_list::{AppList, NotTrackedAppList};
+use super::{
+    app_list::{AppList, NotTrackedAppList},
+    Main,
+};
+
+/* Defines routes and reacts to changes in route rendering corresponding app page */
 
 pub enum Routes {
     Login,
@@ -9,8 +14,8 @@ pub enum Routes {
     NotTrackedApps,
 }
 
-pub fn outlet(route: &Routes, ui: &mut Ui) {
-    match route {
+pub fn outlet(app: &mut Main, ui: &mut Ui) {
+    match app.current_route {
         Routes::Login => (),
         Routes::Home => AppList::new().render(ui),
         Routes::AppPage => (),

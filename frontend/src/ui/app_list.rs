@@ -1,5 +1,6 @@
-use super::{HEADING_COLOR, SUB_HEADING_COLOR};
-use eframe::egui::{Button, Context, ScrollArea, Separator, Ui, Widget};
+use eframe::egui::{Button, ScrollArea, Separator, Ui};
+
+use super::configs::{HEADING_COLOR, SUB_HEADING_COLOR};
 
 /* Structs for ui list of applications that are being tracked by the app */
 

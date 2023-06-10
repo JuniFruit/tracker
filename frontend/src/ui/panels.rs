@@ -1,26 +1,22 @@
-use eframe::egui::{self, Context, Id, Label, Layout, Sense, TopBottomPanel};
+use eframe::egui::{self, Context, Id, Label, Layout, Sense, Separator, TopBottomPanel, Window};
 use eframe::emath::{Align, Align2};
-use eframe::epaint::FontId;
+use eframe::epaint::{FontId, Vec2};
 
-use super::basics::icon_button;
-use super::{Main, Y_PADDING};
+use super::basics::{logo_btn, svg_icon, text_small_button};
+use super::configs::{get_def_frame, ACCENT, ADDITIONAL, Y_PADDING};
+use super::Main;
+
+/* Ui that persists across the pages of the app. Header, footer and custom widow styles */
 
 pub fn header(ctx: &Context, frame: &mut eframe::Frame, app: &mut Main) {
     TopBottomPanel::top("header_bar").show(&ctx, |ui| {
-        let title_bar_height = 32.0;
-        let title_bar_rect = {
-            let mut rect = ui.max_rect();
-            rect.max.y = rect.min.y + title_bar_height;
-            rect
-        };
-
-        title_bar_ui(ui, frame, title_bar_rect, "App Tracker");
-
+        title_bar_ui(ui, frame, "App Tracker");
         ui.add_space(5.);
         eframe::egui::menu::bar(ui, |ui| {
             // Right side elements
             ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
-                let home_btn = ui.add(Label::new("Test"));
+                ui.add_space(5.0);
+                logo_btn(ui, || app.change_route(super::router::Routes::Home));
             });
 
             // Left side buttons
@@ -41,12 +37,14 @@ pub fn footer(ctx: &Context) {
     });
 }
 
-fn title_bar_ui(
-    ui: &mut egui::Ui,
-    frame: &mut eframe::Frame,
-    title_bar_rect: eframe::epaint::Rect,
-    title: &str,
-) {
+fn title_bar_ui(ui: &mut egui::Ui, frame: &mut eframe::Frame, title: &str) {
+    let title_bar_height = 32.0;
+    let title_bar_rect = {
+        let mut rect = ui.max_rect();
+        rect.max.y = rect.min.y + title_bar_height;
+        rect
+    };
+
     let painter = ui.painter();
 
     let title_bar_response = ui.interact(title_bar_rect, Id::new("title_bar"), Sense::click());
@@ -78,13 +76,13 @@ fn title_bar_ui(
 
 /// Show some close/maximize/minimize buttons for the native window.
 fn close_maximize_minimize(ui: &mut egui::Ui, frame: &mut eframe::Frame) {
-    icon_button(ui, "❌", "Close window", || frame.close());
+    text_small_button(ui, "❌", None, || frame.close());
 
     if frame.info().window_info.maximized {
-        icon_button(ui, "🗗", "Minimize window", || frame.set_maximized(false));
+        text_small_button(ui, "🗗", None, || frame.set_maximized(false));
     } else {
-        icon_button(ui, "🗗", "Maximize window", || frame.set_maximized(true))
+        text_small_button(ui, "🗗", None, || frame.set_maximized(true))
     };
 
-    icon_button(ui, "🗕", "Collapse window", || frame.set_minimized(true));
+    text_small_button(ui, "🗕", None, || frame.set_minimized(true));
 }
