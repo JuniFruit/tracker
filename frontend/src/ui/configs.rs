@@ -41,22 +41,19 @@ pub const MAIN_BG: Color32 = Color32::from_rgb(10, 10, 10); // Black
 pub const ERROR_COLOR: Color32 = Color32::from_rgb(254, 0, 0); //Red
 
 pub fn get_def_frame(ctx: &Context) -> Frame {
-    let my_frame = Frame {
+    Frame {
         inner_margin: Margin::symmetric(5.0, 2.0),
         outer_margin: 0.5.into(),
-        rounding: 10.0.into(),
-        shadow: Shadow::small_dark(),
         stroke: Stroke::new(0.0, MAIN_BG),
         fill: ctx.style().visuals.faint_bg_color,
-    };
-
-    my_frame
+        ..Default::default()
+    }
 }
 
 pub fn get_win_options() -> NativeOptions {
     NativeOptions {
         always_on_top: false,
-        initial_window_size: Some(Vec2 { x: 400., y: 600. }),
+        initial_window_size: Some(Vec2 { x: 800., y: 600. }),
         min_window_size: Some(Vec2 { x: 400., y: 600. }),
         max_window_size: None,
         follow_system_theme: false,

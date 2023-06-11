@@ -4,7 +4,6 @@ use std::mem::MaybeUninit;
 use std::ptr::NonNull;
 use std::time::{Duration, SystemTime};
 use std::{io::Result, mem};
-
 use winapi::ctypes::c_void;
 use winapi::shared::minwindef::{DWORD, FILETIME, HMODULE, LPDWORD};
 use winapi::shared::ntdef::FALSE;
@@ -269,4 +268,18 @@ fn filetime_to_systemtime(filetime: &FILETIME) -> SystemTime {
     let duration = Duration::from_nanos(nanos);
 
     SystemTime::UNIX_EPOCH + duration
+}
+
+pub struct ProcessInfo {
+    pub name: String,
+    pub pid: u32,
+}
+
+impl ProcessInfo {
+    pub fn new(name: &str, pid: u32) -> Self {
+        Self {
+            name: name.to_string(),
+            pid,
+        }
+    }
 }

@@ -2,10 +2,10 @@ use crate::procs::enum_procs_by_name;
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use std::error::Error;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::{
     fs::File,
-    sync::mpsc::{self, Receiver, Sender},
+    sync::mpsc::{Receiver, Sender},
     thread,
     time::{Duration, SystemTime},
 };
@@ -50,9 +50,19 @@ pub fn get_tracker_thread_for_proc(
         }
     })
 }
+/// Returns locally saved stats in form of vector.
+pub fn get_stats_from_file() -> Result<Vec<TrackLog>, Box<dyn Error>> {
+    let mut content = String::new();
+    let mut file = File::open("./stats.json")?;
+    file.read_to_string(&mut content);
+    let data: TrackLog = serde_json::from_str(&content)?;
+    Ok(vec![data; 1])
+}
 
-#[derive(Debug, Deserialize, Serialize)]
-struct TrackLog {
+pub fn start_tracking() {}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TrackLog {
     pub username: String,
     pub uptime: u64, // seconds
     pub last_closed: SystemTime,

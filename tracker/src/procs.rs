@@ -1,6 +1,6 @@
 mod process;
 
-use self::process::Process;
+pub use self::process::{Process, ProcessInfo};
 use std::io::{Error, ErrorKind};
 use std::{io::Result, mem};
 use winapi::shared::minwindef::DWORD;

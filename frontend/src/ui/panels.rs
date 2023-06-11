@@ -1,9 +1,13 @@
-use eframe::egui::{self, Context, Id, Label, Layout, Sense, Separator, TopBottomPanel, Window};
+use eframe::egui::panel::Side;
+use eframe::egui::{
+    self, Context, Id, Label, Layout, RichText, Sense, SidePanel, TopBottomPanel, Ui,
+};
 use eframe::emath::{Align, Align2};
-use eframe::epaint::{FontId, Vec2};
+use eframe::epaint::FontId;
 
-use super::basics::{logo_btn, svg_icon, text_small_button};
-use super::configs::{get_def_frame, ACCENT, ADDITIONAL, Y_PADDING};
+use super::basics::{get_icon_img, logo_btn, text_small_button, ImgIcons};
+use super::configs::{get_def_frame, ACCENT, SUB_HEADING_COLOR, Y_PADDING};
+use super::router::Routes;
 use super::Main;
 
 /* Ui that persists across the pages of the app. Header, footer and custom widow styles */
@@ -11,18 +15,6 @@ use super::Main;
 pub fn header(ctx: &Context, frame: &mut eframe::Frame, app: &mut Main) {
     TopBottomPanel::top("header_bar").show(&ctx, |ui| {
         title_bar_ui(ui, frame, "App Tracker");
-        ui.add_space(5.);
-        eframe::egui::menu::bar(ui, |ui| {
-            // Right side elements
-            ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
-                ui.add_space(5.0);
-                logo_btn(ui, || app.change_route(super::router::Routes::Home));
-            });
-
-            // Left side buttons
-            ui.with_layout(Layout::right_to_left(Align::Min), |ui| {});
-        });
-        ui.add_space(5.);
     });
 }
 
@@ -35,6 +27,68 @@ pub fn footer(ctx: &Context) {
             ui.add_space(Y_PADDING + 2.0);
         })
     });
+}
+
+struct SideMenuItem {
+    icon: ImgIcons,
+    title: String,
+    route: Routes,
+}
+
+impl SideMenuItem {
+    fn new(icon: ImgIcons, title: &str, route: Routes) -> Self {
+        Self {
+            icon,
+            title: String::from(title),
+            route,
+        }
+    }
+    fn render(&self, ui: &mut Ui, is_active: bool, on_click: impl FnOnce(&Routes) -> ()) {
+        let color = if is_active { ACCENT } else { SUB_HEADING_COLOR };
+
+        ui.add_space(15.0);
+
+        ui.horizontal(|ui| {
+            ui.add_space(5.0);
+            ui.add(get_icon_img(ui.ctx(), &self.icon, Some(20.0)).bg_fill(color));
+            let nav_btn = ui
+                .add(
+                    Label::new(RichText::new(&self.title).size(20.0).color(color))
+                        .sense(Sense::click()),
+                )
+                .on_hover_cursor(egui::CursorIcon::PointingHand);
+
+            ui.add_space(3.0);
+
+            if nav_btn.clicked() {
+                on_click(&self.route);
+            };
+        });
+
+        ui.add_space(5.0);
+    }
+}
+
+pub fn side_menu(ctx: &Context, app: &mut Main) {
+    let side_menu_data: [SideMenuItem; 3] = [
+        SideMenuItem::new(ImgIcons::HomeIcon, "Home", Routes::Home),
+        SideMenuItem::new(ImgIcons::HomeIcon, "List", Routes::AppPage),
+        SideMenuItem::new(ImgIcons::HomeIcon, "Apps", Routes::NotTrackedApps),
+    ];
+
+    SidePanel::new(Side::Left, "side_menu")
+        .frame(get_def_frame(ctx))
+        .min_width(100.0)
+        .resizable(false)
+        .default_width(150.0)
+        .show_separator_line(false)
+        .show(ctx, |ui| {
+            side_menu_data.into_iter().for_each(|item| {
+                item.render(ui, app.current_route == item.route, |r| {
+                    app.change_route(r.to_owned())
+                });
+            });
+        });
 }
 
 fn title_bar_ui(ui: &mut egui::Ui, frame: &mut eframe::Frame, title: &str) {
@@ -68,6 +122,7 @@ fn title_bar_ui(ui: &mut egui::Ui, frame: &mut eframe::Frame, title: &str) {
     ui.allocate_ui_at_rect(title_bar_rect, |ui| {
         ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
             ui.spacing_mut().item_spacing.x = 2.0;
+
             ui.visuals_mut().button_frame = false;
             close_maximize_minimize(ui, frame);
         });

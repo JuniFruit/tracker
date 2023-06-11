@@ -1,7 +1,7 @@
-use super::configs::{ACCENT, ADDITIONAL};
+use super::configs::ACCENT;
 use eframe::{
-    egui::{self, Button, Context, Image, Label, RichText, Sense, Ui},
-    epaint::{vec2, Vec2},
+    egui::{Button, Context, Image, RichText, Sense, Ui},
+    epaint::vec2,
 };
 use egui_extras::{self, RetainedImage};
 /* Small ui widgets */
@@ -27,10 +27,8 @@ pub fn text_small_button(
     };
 }
 
-pub fn nav_button() {}
-
 pub fn logo_btn(ui: &mut Ui, on_click: impl FnOnce() -> ()) {
-    let logo = get_icon_img(ui.ctx(), ImgIcons::HomeIcon, None)
+    let logo = get_icon_img(ui.ctx(), &ImgIcons::HomeIcon, Some(25.0))
         .sense(Sense::click())
         .bg_fill(ACCENT);
 
@@ -50,7 +48,7 @@ pub enum ImgIcons {
 }
 /// Returns [`RetainedImage`] from icon path.
 
-pub fn svg_icon(icon: ImgIcons) -> RetainedImage {
+pub fn svg_icon(icon: &ImgIcons) -> RetainedImage {
     let fit_to_size = egui_extras::image::FitTo::Original;
 
     match icon {
@@ -73,11 +71,11 @@ pub fn svg_icon(icon: ImgIcons) -> RetainedImage {
     .unwrap()
 }
 /// Returns [`Image`] with default size of 35.0
-pub fn get_icon_img(ctx: &Context, icon: ImgIcons, size: Option<f32>) -> Image {
+pub fn get_icon_img(ctx: &Context, icon: &ImgIcons, size: Option<f32>) -> Image {
     let size = if size != None {
         vec2(size.unwrap(), size.unwrap())
     } else {
-        vec2(30.0, 30.0)
+        vec2(25.0, 25.0)
     };
 
     let icon = svg_icon(icon);

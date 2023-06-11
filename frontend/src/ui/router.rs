@@ -6,7 +6,7 @@ use super::{
 };
 
 /* Defines routes and reacts to changes in route rendering corresponding app page */
-
+#[derive(PartialEq, Clone)]
 pub enum Routes {
     Login,
     Home,
@@ -19,6 +19,11 @@ pub fn outlet(app: &mut Main, ui: &mut Ui) {
         Routes::Login => (),
         Routes::Home => AppList::new().render(ui),
         Routes::AppPage => (),
-        Routes::NotTrackedApps => NotTrackedAppList::new().render(ui),
+        Routes::NotTrackedApps => match app.untracked_apps.list {
+            Some(_) => app.untracked_apps.render(ui),
+            None => {
+                app.untracked_apps.fetch_data();
+            }
+        },
     };
 }

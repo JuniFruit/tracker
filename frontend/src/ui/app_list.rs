@@ -1,4 +1,14 @@
-use eframe::egui::{Button, ScrollArea, Separator, Ui};
+use std::{
+    sync,
+    thread::{self, JoinHandle},
+    time::Duration,
+};
+
+use eframe::{
+    egui::{panel::Side, Button, Label, RichText, ScrollArea, Separator, SidePanel, Ui},
+    epaint::FontId,
+};
+use tracker::{get_running_procs, procs::Process};
 
 use super::configs::{HEADING_COLOR, SUB_HEADING_COLOR};
 
@@ -29,7 +39,7 @@ impl AppListItem {
         ui.add_space(PADDING);
     }
 }
-
+/// Apps that our application is tracking. Added by user.
 pub struct AppList {
     pub list: Vec<AppListItem>,
 }
@@ -59,8 +69,10 @@ impl AppList {
     }
 }
 
+/// Apps that are currently running in the system but not tracked by the app
 pub struct NotTrackedAppItem {
     name: String,
+    pid: u32,
 }
 
 impl NotTrackedAppItem {
@@ -76,20 +88,52 @@ impl NotTrackedAppItem {
 }
 
 pub struct NotTrackedAppList {
-    list: Vec<NotTrackedAppItem>,
+    pub list: Option<Vec<NotTrackedAppItem>>,
 }
 
 impl NotTrackedAppList {
     pub fn new() -> Self {
-        let iter = (0..5)
-            .map(|item| NotTrackedAppItem {
-                name: format!("{}", item),
-            })
-            .into_iter();
+        Self { list: None }
+    }
 
-        Self {
-            list: Vec::from_iter(iter),
-        }
+    pub fn fetch_data(&mut self) {
+        let (rx, tx) = sync::mpsc::channel();
+
+        let handler = thread::spawn(move || {
+            let mut tries: u8 = 0;
+            thread::sleep(Duration::new(5, 0));
+            while tries < 5 {
+                match get_running_procs() {
+                    Ok(procs) => {
+                        if let Err(e) = rx.send(procs) {
+                            eprint!("Error sending Untracked AppList: {}", e);
+                        };
+                        break;
+                    }
+                    Err(e) => {
+                        tries += 1;
+                        eprint!("Couldn't get running processes: {}", e)
+                    }
+                }
+            }
+        })
+        .join();
+        match tx.try_recv() {
+            Ok(procs) => {
+                self.list = Some(
+                    procs
+                        .into_iter()
+                        .map(|p| NotTrackedAppItem {
+                            name: p.name,
+                            pid: p.pid,
+                        })
+                        .collect(),
+                )
+            }
+            Err(e) => {
+                eprint!("Couldn't receive Untracked app list: {}", e);
+            }
+        };
     }
 
     pub fn render(&self, ui: &mut Ui) {
@@ -97,13 +141,26 @@ impl NotTrackedAppList {
         ui.vertical_centered(|ui| ui.heading("Choose apps to track"));
         ui.add(Separator::default().spacing(20.0));
 
-        ScrollArea::new([false, true]).show(ui, |ui| {
-            for item in &self.list {
-                item.render(ui);
-                ui.separator();
+        match &self.list {
+            Some(list) => {
+                ScrollArea::new([false, true]).show(ui, |ui| {
+                    for item in list {
+                        item.render(ui);
+                        ui.separator();
+                    }
+                });
             }
-        });
+            None => self.render_if_empty(ui),
+        };
 
         ui.add_space(PADDING);
+    }
+
+    fn render_if_empty(&self, ui: &mut Ui) {
+        ui.vertical_centered_justified(|ui| {
+            ui.add(Label::new(
+                RichText::new("No apps found").color(SUB_HEADING_COLOR),
+            ));
+        });
     }
 }
