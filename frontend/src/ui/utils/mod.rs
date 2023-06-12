@@ -44,3 +44,14 @@ pub fn get_my(top: f32, bottom: f32) -> Margin {
         bottom,
     }
 }
+
+pub fn format_time(secs: u64) -> String {
+    if secs > (60 * 60) {
+        return format!("{} hours", secs / (60 * 60));
+    }
+    if secs > 60 {
+        return format!("{} minutes", secs / 60);
+    }
+
+    return format!("{} seconds", secs);
+}

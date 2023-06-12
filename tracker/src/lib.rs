@@ -5,7 +5,7 @@ mod utils;
 use procs::{enum_procs_by_name, Process, ProcessInfo};
 use std::error::Error;
 
-use tracking::{get_stats_from_file, TrackLog};
+use tracking::{get_stats_from_file, get_tracker_thread_for_proc, TrackLog};
 
 pub fn get_running_procs() -> Result<Vec<ProcessInfo>, Box<dyn Error>> {
     match enum_procs_by_name() {
@@ -23,4 +23,10 @@ pub fn get_tracked_procs_by_user(username: &str) -> Result<Vec<TrackLog>, Box<dy
         .into_iter()
         .filter(|p| p.username == username)
         .collect())
+}
+
+pub fn start_tracking(proc_name: &str, username: &str) {
+    let (rx, tx) = std::sync::mpsc::channel();
+    println!("Started tracking: {}", &proc_name);
+    get_tracker_thread_for_proc(rx, tx, username, proc_name);
 }

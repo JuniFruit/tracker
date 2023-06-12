@@ -158,6 +158,15 @@ pub fn configure_text_styles(ctx: &Context) {
 /* User configs */
 
 pub struct UserConfig {
-    username: String,
-    is_logged: bool,
+    pub username: String,
+    pub is_logged: bool,
+}
+
+impl UserConfig {
+    pub fn new(username: &str) -> Self {
+        Self {
+            username: username.to_string(),
+            is_logged: false,
+        }
+    }
 }

@@ -15,15 +15,10 @@ pub enum Routes {
 }
 
 pub fn outlet(app: &mut Main, ui: &mut Ui) {
-    match app.current_route {
+    match &app.current_route {
         Routes::Login => (),
-        Routes::Home => AppList::new().render(ui),
+        Routes::Home => app.tracked_apps.render(ui, &app.config),
         Routes::AppPage => (),
-        Routes::NotTrackedApps => match app.untracked_apps.list {
-            Some(_) => app.untracked_apps.render(ui),
-            None => {
-                app.untracked_apps.fetch_data();
-            }
-        },
+        Routes::NotTrackedApps => app.untracked_apps.render(ui, &app.config),
     };
 }
