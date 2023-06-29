@@ -17,8 +17,8 @@ pub enum Routes {
 pub fn outlet(app: &mut Main, ui: &mut Ui) {
     match &app.current_route {
         Routes::Login => (),
-        Routes::Home => app.tracked_apps.render(ui, &app.config),
+        Routes::Home => app.tracked_apps.render(ui),
         Routes::AppPage => (),
-        Routes::NotTrackedApps => app.untracked_apps.render(ui, &app.config),
+        Routes::NotTrackedApps => app.untracked_apps.render(ui),
     };
 }

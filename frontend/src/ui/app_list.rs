@@ -16,8 +16,10 @@ use tracker::{
     tracking::TrackLog,
 };
 
+use crate::store::apps_store::{get_apps_store, Actions};
+
 use super::{
-    configs::{UserConfig, ACCENT, HEADING_COLOR, SUB_HEADING_COLOR},
+    configs::{get_userconfig, ACCENT, HEADING_COLOR, SUB_HEADING_COLOR},
     utils::format_time,
 };
 
@@ -65,7 +67,7 @@ impl AppList {
         }
     }
 
-    pub fn render(&mut self, ui: &mut Ui, config: &UserConfig) {
+    pub fn render(&mut self, ui: &mut Ui) {
         ui.add_space(PADDING);
         ui.vertical_centered(|ui| ui.heading("Applications you use"));
         ui.add(Separator::default().spacing(20.0));
@@ -80,7 +82,7 @@ impl AppList {
                 });
             }
             None => {
-                self.async_get_data(&config.username);
+                self.async_get_data(&get_userconfig().username);
                 self.render_if_empty(ui);
             }
         }
@@ -188,28 +190,35 @@ impl NotTrackedAppList {
         }
     }
 
-    pub fn render(&mut self, ui: &mut Ui, config: &UserConfig) {
+    pub fn render(&mut self, ui: &mut Ui) {
         ui.add_space(PADDING);
         ui.vertical_centered(|ui| ui.heading("Choose apps to track"));
         ui.add(Separator::default().spacing(20.0));
 
-        match &self.list {
+        match get_apps_store().dispatch(A) {
             Some(list) => {
                 ScrollArea::new([false, true]).show(ui, |ui| {
                     for item in list {
-                        item.render(ui, |proc_name| start_tracking(&proc_name, &config.username));
+                        item.render(ui, |proc_name| {
+                            start_tracking(&proc_name, &get_userconfig().username)
+                        });
 
                         ui.separator();
                     }
                 });
             }
             None => {
-                self.async_get_data();
-                self.render_if_empty(ui);
+                get_apps_store().dispatch(Actions::GetUntrackedApps);
+                // self.async_get_data();
+                // self.render_if_empty(ui);
             }
         };
 
         ui.add_space(PADDING);
+    }
+
+    fn use_load_data(&self) {
+        get_apps_store().dispatch(Actions::GetUntrackedApps);
     }
 
     fn fetch_data(&mut self) -> JoinHandle<()> {

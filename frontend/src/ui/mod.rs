@@ -5,13 +5,9 @@ mod panels;
 mod router;
 mod utils;
 
-use std::thread;
-
 use self::{
     app_list::{AppList, NotTrackedAppList},
-    configs::{
-        configure_fonts, configure_text_styles, configure_visuals, get_win_options, UserConfig,
-    },
+    configs::{configure_fonts, configure_text_styles, configure_visuals, get_win_options},
     panels::{footer, header, side_menu},
     router::{outlet, Routes},
 };
@@ -28,7 +24,6 @@ pub struct Main {
     current_route: Routes,
     tracked_apps: AppList,
     untracked_apps: NotTrackedAppList,
-    config: UserConfig,
 }
 
 impl Main {
@@ -42,7 +37,6 @@ impl Main {
             current_route: Routes::Home,
             tracked_apps: AppList::new(),
             untracked_apps: NotTrackedAppList::new(),
-            config: UserConfig::new("fruit"),
         }
     }
 

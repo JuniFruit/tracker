@@ -1,3 +1,5 @@
+use std::sync::{Mutex, MutexGuard};
+
 use eframe::{
     egui::{
         style::{Selection, Widgets},
@@ -157,6 +159,10 @@ pub fn configure_text_styles(ctx: &Context) {
 
 /* User configs */
 
+lazy_static! {
+    static ref USER_CONFIG: Mutex<UserConfig> = Mutex::new(UserConfig::new("fruit"));
+}
+
 pub struct UserConfig {
     pub username: String,
     pub is_logged: bool,
@@ -169,4 +175,16 @@ impl UserConfig {
             is_logged: false,
         }
     }
+
+    pub fn get_username(&self) -> &str {
+        &self.username
+    }
+    pub fn change_useranme(&mut self, username: &str) {
+        self.username = username.to_string();
+    }
+}
+
+pub fn get_userconfig() -> MutexGuard<'static, UserConfig> {
+    let conf: MutexGuard<'_, UserConfig> = USER_CONFIG.lock().unwrap();
+    conf
 }
