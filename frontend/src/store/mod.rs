@@ -1,5 +1,5 @@
 pub mod apps_store;
-
+pub mod user_store;
 /* This implementaion rejects the idea of pure functions. Instead of copying state we simply mutate it in place */
 pub struct Store<T, M> {
     state: T,
@@ -12,7 +12,7 @@ unsafe impl<T, M> Send for Store<T, M> {}
 impl<T, M> Store<T, M>
 where
     T: Default,
-    M: ReducerMsg + Clone + Copy,
+    M: ReducerMsg + Clone,
 {
     pub fn new(reducer: Box<dyn Fn(&mut T, M) -> ()>) -> Self {
         Store {

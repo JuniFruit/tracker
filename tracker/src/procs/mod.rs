@@ -1,12 +1,26 @@
-mod process;
+pub mod process;
 
-pub use self::process::{Process, ProcessInfo};
 use std::io::{Error, ErrorKind};
-use std::{io::Result, mem};
+use std::mem;
+use std::result::Result;
 use winapi::shared::minwindef::DWORD;
 use winapi::shared::ntdef::FALSE;
 
-pub fn enum_procs() -> Result<Vec<u32>> {
+use crate::procs::process::Process;
+
+use self::process::ProcessInfo;
+
+pub fn get_running_procs() -> Result<Vec<ProcessInfo>, Box<dyn std::error::Error>> {
+    match enum_procs_by_name() {
+        Ok(procs) => Ok(procs
+            .into_iter()
+            .map(|p| ProcessInfo::new(p.name(), p.pid()))
+            .collect()),
+        Err(e) => Err(Box::new(e)),
+    }
+}
+
+fn enum_procs() -> std::io::Result<Vec<u32>> {
     let mut pids = Vec::<DWORD>::with_capacity(1024);
     let mut size = 0;
 
@@ -26,7 +40,7 @@ pub fn enum_procs() -> Result<Vec<u32>> {
     Ok(pids)
 }
 
-pub fn enum_procs_by_name() -> Result<Vec<Process>> {
+pub fn enum_procs_by_name() -> std::io::Result<Vec<Process>> {
     let mut opened: u32 = 0;
     let mut tried: u32 = 0;
 

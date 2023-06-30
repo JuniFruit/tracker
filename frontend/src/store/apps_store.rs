@@ -1,15 +1,17 @@
 use std::{
     sync::{
-        self,
-        mpsc::{Receiver, Sender, TryRecvError},
+        mpsc::{channel, Receiver},
         Mutex, MutexGuard,
     },
-    thread::{self, JoinHandle},
+    thread::{self},
 };
 
-use tracker::{get_running_procs, procs::ProcessInfo, tracking::TrackLog};
+use tracker::{
+    procs::{get_running_procs, process::ProcessInfo},
+    tracking::{get_tracked_procs_by_user, start_tracking, TrackLog},
+};
 
-use super::{ReducerMsg, Store};
+use super::{user_store::use_user_store, ReducerMsg, Store};
 
 lazy_static! {
     static ref APPS_STORE: Mutex<Store<AppState, Actions>> =
@@ -18,77 +20,101 @@ lazy_static! {
 
 #[derive(Default)]
 pub struct AppState {
-    tracked_apps: Vec<TrackLog>,
-    untracked_apps: Vec<ProcessInfo>,
-    is_fetching_tracked: bool,
-    is_fetching_untracked: bool,
+    pub tracked_apps: Vec<TrackLog>,
+    pub untracked_apps: Vec<ProcessInfo>,
+    pub is_fetching_tracked: bool,
+    pub is_fetching_untracked: bool,
+    pub is_error_untracked: bool,
+    pub is_error_tracked: bool,
+    tracked_tx: Option<Receiver<Vec<TrackLog>>>,
+    untracked_tx: Option<Receiver<Vec<ProcessInfo>>>,
 }
 
 fn reducer(state: &mut AppState, msg: Actions) {
     match msg {
-        Actions::GetTrackedApps => println!("Get tracked apps"),
-        Actions::AddTrackedApp => println!("Add tracked app"),
-        Actions::DeleteTrackedApp => println!("Delete tracked app"),
-        Actions::GetUntrackedApps => {
-            let (rx, tx) = sync::mpsc::channel();
-            if state.is_fetching_untracked {
-                async_get_data(state, tx);
-            } else {
-                fetch_data(state, rx);
+        Actions::FetchTrackedApps => {
+            if !state.is_fetching_tracked {
+                fetch_tracked_apps(state)
+            } else if state.tracked_tx.is_some() {
+                match state.tracked_tx.as_ref().unwrap().try_recv() {
+                    Ok(data) => {
+                        state.tracked_apps = data;
+                        state.is_fetching_tracked = false
+                    }
+                    Err(e) => {
+                        eprintln!("Couldn't recieve msg from tracked apps channel: {}", e)
+                    }
+                }
             }
         }
+        Actions::AddTrackedApp(username, proc_name) => {
+            start_tracking(proc_name, username);
+        }
+        Actions::DeleteTrackedApp => println!("Delete tracked app"),
+        Actions::FetchUntrackedApps => {
+            if !state.is_fetching_untracked {
+                fetch_untracked_apps(state);
+            } else if state.untracked_tx.is_some() {
+                match state.untracked_tx.as_ref().unwrap().try_recv() {
+                    Ok(data) => {
+                        state.untracked_apps = data;
+                        state.is_fetching_untracked = false;
+                    }
+                    Err(e) => {
+                        eprintln!("Couldn't recieve msg from untracked apps channel: {}", e)
+                    }
+                };
+            }
+        }
+
         Actions::None => (),
     };
 }
 
-fn fetch_data(state: &mut AppState, rx: Sender<Vec<ProcessInfo>>) -> JoinHandle<()> {
-    let handler = thread::spawn(move || {
-        let mut tries: u8 = 0;
-
-        while tries < 5 {
-            match get_running_procs() {
-                Ok(procs) => {
-                    if let Err(e) = rx.send(procs) {
-                        eprint!("Error sending Untracked AppList: {}", e);
-                    };
-                    break;
-                }
-                Err(e) => {
-                    tries += 1;
-                    eprint!("Couldn't get running processes: {}", e)
-                }
-            }
-        }
-    });
-    state.is_fetching_untracked = true;
-    handler
-}
-
-fn async_get_data(state: &mut AppState, tx: Receiver<Vec<ProcessInfo>>) {
-    match tx.try_recv() {
-        Ok(data) => {
-            state.untracked_apps = data;
-            state.is_fetching_untracked = false;
+fn fetch_untracked_apps(state: &mut AppState) {
+    let (rx, tx) = channel();
+    thread::spawn(move || match get_running_procs() {
+        Ok(procs) => {
+            if let Err(e) = rx.send(procs) {
+                eprint!("Error sending Untracked AppList: {}", e);
+            };
         }
         Err(e) => {
-            if e == TryRecvError::Disconnected {
-            } else {
-                eprintln!("Couldn't recieve msg from untracked apps channel: {}", e)
-            }
+            eprint!("Couldn't get running processes: {}", e)
         }
-    };
+    });
+    state.untracked_tx = Some(tx);
+    state.is_fetching_untracked = true;
 }
 
-pub fn get_apps_store() -> MutexGuard<'static, Store<AppState, Actions>> {
+fn fetch_tracked_apps(state: &mut AppState) {
+    let (rx, tx) = channel();
+    thread::spawn(
+        move || match get_tracked_procs_by_user(&use_user_store().selector().username) {
+            Ok(tracked_procs) => {
+                if let Err(e) = rx.send(tracked_procs) {
+                    eprintln!("Error sending Tracked AppList: {}", e);
+                };
+            }
+            Err(e) => {
+                eprintln!("Couldn't get tracked processes: {}", e);
+            }
+        },
+    );
+    state.tracked_tx = Some(tx);
+    state.is_fetching_tracked = true
+}
+
+pub fn use_apps_store() -> MutexGuard<'static, Store<AppState, Actions>> {
     APPS_STORE.lock().unwrap()
 }
 
 #[derive(Clone, Copy)]
 pub enum Actions {
     None,
-    GetTrackedApps,
-    GetUntrackedApps,
-    AddTrackedApp,
+    FetchTrackedApps,
+    FetchUntrackedApps,
+    AddTrackedApp(&str, &str),
     DeleteTrackedApp,
 }
 impl ReducerMsg for Actions {

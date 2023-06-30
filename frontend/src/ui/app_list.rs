@@ -1,25 +1,15 @@
-use std::{
-    sync::{
-        self,
-        mpsc::{Receiver, TryRecvError},
-    },
-    thread::{self, JoinHandle},
-    time::Duration,
-};
-
 use eframe::{
     egui::{Button, Label, Layout, RichText, ScrollArea, Separator, Ui, Vec2},
     emath::Align,
 };
-use tracker::{
-    get_running_procs, get_tracked_procs_by_user, procs::ProcessInfo, start_tracking,
-    tracking::TrackLog,
+
+use crate::store::{
+    apps_store::{use_apps_store, Actions},
+    user_store::use_user_store,
 };
 
-use crate::store::apps_store::{get_apps_store, Actions};
-
 use super::{
-    configs::{get_userconfig, ACCENT, HEADING_COLOR, SUB_HEADING_COLOR},
+    configs::{ACCENT, HEADING_COLOR, SUB_HEADING_COLOR},
     utils::format_time,
 };
 
@@ -55,16 +45,12 @@ impl AppListItem {
 }
 /// Apps that our application is tracking. Added by user.
 pub struct AppList {
-    pub list: Option<Vec<AppListItem>>,
-    data_tx: Option<Receiver<Vec<TrackLog>>>,
+    pub list: Vec<AppListItem>,
 }
 
 impl AppList {
     pub fn new() -> Self {
-        Self {
-            list: None,
-            data_tx: None,
-        }
+        Self { list: vec![] }
     }
 
     pub fn render(&mut self, ui: &mut Ui) {
@@ -72,69 +58,49 @@ impl AppList {
         ui.vertical_centered(|ui| ui.heading("Applications you use"));
         ui.add(Separator::default().spacing(20.0));
 
-        match &self.list {
-            Some(list) => {
-                ScrollArea::new([false, true]).show(ui, |ui| {
-                    for item in list {
-                        item.render(ui);
-                        ui.separator();
-                    }
-                });
-            }
-            None => {
-                self.async_get_data(&get_userconfig().username);
-                self.render_if_empty(ui);
-            }
-        }
+        self.use_load_data();
+
+        let is_loading = use_apps_store().selector().is_fetching_tracked;
+        let is_error = use_apps_store().selector().is_error_tracked;
+
+        if is_loading {
+            ui.label("Loading");
+        } else if is_error {
+            self.render_if_empty(ui);
+        };
+
+        self.render_list(ui);
 
         ui.add_space(PADDING);
     }
 
-    fn async_get_data(&mut self, username: &str) {
-        match &self.data_tx {
-            Some(tx) => match tx.try_recv() {
-                Ok(data) => {
-                    self.list = Some(
-                        data.into_iter()
-                            .map(|p| AppListItem::new(&p.process_name, p.uptime))
-                            .collect(),
-                    );
-                    self.data_tx = None;
-                }
-                Err(e) => {
-                    eprintln!("Couldn't recieve msg from tracked apps channel: {}", e)
-                }
-            },
-            None => {
-                self.fetch_tracked_apps(username);
-            }
-        };
+    fn use_load_data(&mut self) {
+        if use_apps_store().selector().tracked_apps.len() == 0 {
+            use_apps_store().dispatch(Actions::FetchTrackedApps);
+        } else {
+            self.make_list()
+        }
     }
 
-    fn fetch_tracked_apps(&mut self, username: &str) -> JoinHandle<()> {
-        let username = username.to_string();
-        let (rx, tx) = sync::mpsc::channel();
-        let handler = thread::spawn(move || {
-            let mut tries: u8 = 0;
+    fn make_list(&mut self) {
+        if self.list.len() > 0 {
+            return;
+        }
 
-            while tries < 5 {
-                match get_tracked_procs_by_user(&username) {
-                    Ok(tracked_procs) => {
-                        if let Err(e) = rx.send(tracked_procs) {
-                            eprintln!("Error sending Tracked AppList: {}", e);
-                        };
-                        break;
-                    }
-                    Err(e) => {
-                        tries += 1;
-                        eprintln!("Couldn't get tracked processes: {}", e);
-                        thread::sleep(Duration::from_secs(5));
-                    }
-                }
+        for item in &use_apps_store().selector().tracked_apps {
+            self.list
+                .push(AppListItem::new(&item.process_name, item.uptime));
+        }
+    }
+
+    fn render_list(&self, ui: &mut Ui) {
+        ScrollArea::new([false, true]).show(ui, |ui| {
+            for item in &self.list {
+                item.render(ui);
+
+                ui.separator();
             }
         });
-        self.data_tx = Some(tx);
-        handler
     }
 
     fn render_if_empty(&self, ui: &mut Ui) {
@@ -178,15 +144,15 @@ impl NotTrackedAppItem {
 }
 
 pub struct NotTrackedAppList {
-    pub list: Option<Vec<NotTrackedAppItem>>,
-    data_tx: Option<Receiver<Vec<ProcessInfo>>>,
+    pub list: Vec<NotTrackedAppItem>,
+    calls: u64,
 }
 
 impl NotTrackedAppList {
     pub fn new() -> Self {
         Self {
-            list: None,
-            data_tx: None,
+            list: vec![],
+            calls: 0,
         }
     }
 
@@ -195,81 +161,58 @@ impl NotTrackedAppList {
         ui.vertical_centered(|ui| ui.heading("Choose apps to track"));
         ui.add(Separator::default().spacing(20.0));
 
-        match get_apps_store().dispatch(A) {
-            Some(list) => {
-                ScrollArea::new([false, true]).show(ui, |ui| {
-                    for item in list {
-                        item.render(ui, |proc_name| {
-                            start_tracking(&proc_name, &get_userconfig().username)
-                        });
+        self.use_load_data();
 
-                        ui.separator();
-                    }
-                });
-            }
-            None => {
-                get_apps_store().dispatch(Actions::GetUntrackedApps);
-                // self.async_get_data();
-                // self.render_if_empty(ui);
-            }
+        let is_loading = use_apps_store().selector().is_fetching_untracked;
+        let is_error = use_apps_store().selector().is_error_untracked;
+
+        if is_loading {
+            ui.label("Loading");
+        } else if is_error {
+            self.render_if_empty(ui);
         };
+
+        self.render_list(ui);
 
         ui.add_space(PADDING);
     }
 
-    fn use_load_data(&self) {
-        get_apps_store().dispatch(Actions::GetUntrackedApps);
+    fn use_load_data(&mut self) {
+        self.calls += 1;
+        println!("Calls: {}", self.calls);
+        if use_apps_store().selector().untracked_apps.len() == 0 {
+            use_apps_store().dispatch(Actions::FetchUntrackedApps);
+        } else {
+            self.make_list()
+        }
     }
 
-    fn fetch_data(&mut self) -> JoinHandle<()> {
-        let (rx, tx) = sync::mpsc::channel();
-        let handler = thread::spawn(move || {
-            let mut tries: u8 = 0;
+    fn make_list(&mut self) {
+        if self.list.len() > 0 {
+            return;
+        }
 
-            while tries < 5 {
-                match get_running_procs() {
-                    Ok(procs) => {
-                        if let Err(e) = rx.send(procs) {
-                            eprint!("Error sending Untracked AppList: {}", e);
-                        };
-                        break;
-                    }
-                    Err(e) => {
-                        tries += 1;
-                        eprint!("Couldn't get running processes: {}", e)
-                    }
-                }
+        for item in &use_apps_store().selector().untracked_apps {
+            self.list.push(NotTrackedAppItem {
+                name: item.name.clone(),
+                pid: item.pid,
+            });
+        }
+    }
+
+    fn render_list(&self, ui: &mut Ui) {
+        ScrollArea::new([false, true]).show(ui, |ui| {
+            for item in &self.list {
+                item.render(ui, |proc_name| {
+                    use_apps_store().dispatch(Actions::AddTrackedApp(
+                        &use_user_store().selector().username,
+                        &proc_name,
+                    ))
+                });
+
+                ui.separator();
             }
         });
-        self.data_tx = Some(tx);
-        handler
-    }
-
-    fn async_get_data(&mut self) {
-        match &self.data_tx {
-            Some(tx) => match tx.try_recv() {
-                Ok(data) => {
-                    self.list = Some(
-                        data.into_iter()
-                            .map(|p| NotTrackedAppItem {
-                                name: p.name,
-                                pid: p.pid,
-                            })
-                            .collect(),
-                    );
-                    self.data_tx = None;
-                }
-                Err(e) => {
-                    if e == TryRecvError::Disconnected {
-                    } else {
-                        eprintln!("Couldn't recieve msg from untracked apps channel: {}", e)
-                    }
-                }
-            },
-            None => {
-                self.fetch_data();
-            }
-        };
     }
 
     fn render_if_empty(&self, ui: &mut Ui) {

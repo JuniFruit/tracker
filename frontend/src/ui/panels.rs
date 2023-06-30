@@ -70,9 +70,9 @@ impl SideMenuItem {
 }
 
 pub fn side_menu(ctx: &Context, app: &mut Main) {
-    let side_menu_data: [SideMenuItem; 3] = [
+    let side_menu_data: [SideMenuItem; 2] = [
         SideMenuItem::new(ImgIcons::HomeIcon, "Home", Routes::Home),
-        SideMenuItem::new(ImgIcons::HomeIcon, "List", Routes::AppPage),
+        // SideMenuItem::new(ImgIcons::HomeIcon, "List", Routes::AppPage),
         SideMenuItem::new(ImgIcons::HomeIcon, "Apps", Routes::NotTrackedApps),
     ];
 

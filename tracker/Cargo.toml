@@ -10,3 +10,4 @@ winapi = { version = "0.3.9", features = ["psapi", "processthreadsapi", "handlea
 serde_json = "1.0.59"
 serde = "1.0.117"
 serde_derive = "1.0.117"
+lazy_static = "1.4.0"

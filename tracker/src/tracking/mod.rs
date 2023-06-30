@@ -1,28 +1,35 @@
-use crate::procs::enum_procs_by_name;
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use std::error::Error;
 use std::fs;
 use std::{
     fs::File,
-    sync::mpsc::{Receiver, Sender},
     thread,
     time::{Duration, SystemTime},
 };
 
+use crate::procs::enum_procs_by_name;
+
 const STATS_PATH: &str = "./stats.json";
 
-pub fn get_tracker_thread_for_proc(
-    _sender: Sender<String>,
-    _receiver: Receiver<String>,
-    username: &str,
-    proc_name: &str,
-) -> thread::JoinHandle<()> {
-    let mut track_log = TrackLog::new(username, proc_name);
-    track_log.set_last_opened(SystemTime::now());
+pub fn get_tracked_procs_by_user(username: &str) -> Result<Vec<TrackLog>, Box<dyn Error>> {
+    let procs = get_stats_from_file()?;
+    Ok(procs
+        .into_iter()
+        .filter(|p| p.username == username)
+        .collect())
+}
 
+pub fn start_tracking<'a>(proc_name: &'a str, username: &str) {
+    println!("Started tracking: {}", &proc_name);
+    get_tracker_thread_for_proc(username, proc_name);
+}
+
+fn get_tracker_thread_for_proc(username: &str, proc_name: &str) {
+    let mut track_log = TrackLog::new(username, proc_name);
     thread::spawn(move || {
         let interval = Duration::from_secs(20);
+
         loop {
             let procs = enum_procs_by_name().unwrap();
             let target = procs
@@ -47,10 +54,10 @@ pub fn get_tracker_thread_for_proc(
                 &track_log.uptime / 60
             );
         }
-    })
+    });
 }
 /// Returns locally saved stats in form of vector.
-pub fn get_stats_from_file() -> Result<Vec<TrackLog>, Box<dyn Error>> {
+fn get_stats_from_file() -> Result<Vec<TrackLog>, Box<dyn Error>> {
     File::open(STATS_PATH)?;
 
     let data = fs::read_to_string(STATS_PATH).expect("Unable to read file");

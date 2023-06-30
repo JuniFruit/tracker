@@ -50,7 +50,7 @@ impl App for Main {
         header(&ctx, frame, self);
         side_menu(ctx, self);
         CentralPanel::default().show(ctx, |ui| outlet(self, ui));
-        footer(&ctx);
+        // footer(&ctx);
     }
 
     fn save(&mut self, _storage: &mut dyn eframe::Storage) {}
