@@ -1,5 +1,3 @@
-use std::sync::{Mutex, MutexGuard};
-
 use eframe::{
     egui::{
         style::{Selection, Widgets},
@@ -13,11 +11,6 @@ use eframe::{
 use super::utils::shade_color;
 
 /* File with ui app configs and user configs structs */
-
-/* UI configs */
-
-pub const X_PADDING: f32 = 2.0;
-pub const Y_PADDING: f32 = 4.0;
 
 const FRAME_ROUNDING: Rounding = Rounding {
     nw: 1.0,

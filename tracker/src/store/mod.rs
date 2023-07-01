@@ -23,8 +23,8 @@ where
     }
 
     pub fn dispatch(&mut self, msg: M) {
-        (self.reducer)(&mut self.state, msg);
-        self.middleware_strategy(msg);
+        (self.reducer)(&mut self.state, msg.to_owned());
+        self.middleware_strategy(msg.to_owned());
     }
     /* Adds middileware */
     pub fn use_middleware(&mut self, mw: Box<dyn Fn(&mut T, M) -> M>) {
@@ -38,7 +38,7 @@ where
     fn middleware_strategy(&mut self, msg: M) {
         let mut results = Vec::new();
         for mw in self.middleware.iter() {
-            results.push((mw)(&mut self.state, msg));
+            results.push((mw)(&mut self.state, msg.to_owned()));
         }
         for m in results.iter() {
             self.dispatch(m.clone());
@@ -49,12 +49,6 @@ where
 pub trait ReducerMsg {
     type Value;
 }
-
-// struct Msg {}
-
-// impl ReducerMsg for Msg {
-//     type Value = Messages;
-// }
 
 pub enum Messages {
     None,

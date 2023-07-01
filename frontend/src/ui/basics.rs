@@ -1,7 +1,7 @@
 use super::configs::ACCENT;
 use eframe::{
-    egui::{Button, Context, Image, RichText, Sense, Ui},
-    epaint::vec2,
+    egui::{Button, Context, Image, Response, RichText, Sense, Ui},
+    epaint::{vec2, Color32, Vec2},
 };
 use egui_extras::{self, RetainedImage};
 /* Small ui widgets */
@@ -25,6 +25,19 @@ pub fn text_small_button(
     if on_hover_text != None {
         btn.on_hover_text(on_hover_text.unwrap());
     };
+}
+
+pub fn core_btn(ui: &mut Ui, color: Color32, text: &str) -> Response {
+    let add_btn = ui
+        .add(
+            Button::new(RichText::new(text).size(15.0))
+                .min_size(Vec2::new(45.0, 25.0))
+                .rounding(5.0)
+                .fill(color),
+        )
+        .on_hover_cursor(eframe::egui::CursorIcon::PointingHand);
+
+    add_btn
 }
 
 pub fn logo_btn(ui: &mut Ui, on_click: impl FnOnce() -> ()) {

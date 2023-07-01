@@ -1,12 +1,10 @@
 use eframe::egui::panel::Side;
-use eframe::egui::{
-    self, Context, Id, Label, Layout, RichText, Sense, SidePanel, TopBottomPanel, Ui,
-};
+use eframe::egui::{self, Context, Id, Label, RichText, Sense, SidePanel, TopBottomPanel, Ui};
 use eframe::emath::{Align, Align2};
 use eframe::epaint::FontId;
 
-use super::basics::{get_icon_img, logo_btn, text_small_button, ImgIcons};
-use super::configs::{get_def_frame, ACCENT, SUB_HEADING_COLOR, Y_PADDING};
+use super::basics::{get_icon_img, text_small_button, ImgIcons};
+use super::configs::{get_def_frame, ACCENT, SUB_HEADING_COLOR};
 use super::router::Routes;
 use super::Main;
 
@@ -15,17 +13,6 @@ use super::Main;
 pub fn header(ctx: &Context, frame: &mut eframe::Frame, app: &mut Main) {
     TopBottomPanel::top("header_bar").show(&ctx, |ui| {
         title_bar_ui(ui, frame, "App Tracker");
-    });
-}
-
-pub fn footer(ctx: &Context) {
-    TopBottomPanel::bottom("footer_bar").show(ctx, |ui| {
-        ui.vertical_centered(|ui| {
-            ui.add_space(Y_PADDING + 2.0);
-            ui.add(Label::new("Created by Junifruit"));
-            ui.hyperlink_to("GitHub", "https://github.com/JuniFruit/JuniFruit.github.io");
-            ui.add_space(Y_PADDING + 2.0);
-        })
     });
 }
 

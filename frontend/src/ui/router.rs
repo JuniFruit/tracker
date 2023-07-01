@@ -1,9 +1,6 @@
-use eframe::egui::{Ui, Widget};
+use eframe::egui::Ui;
 
-use super::{
-    app_list::{AppList, NotTrackedAppList},
-    Main,
-};
+use super::Main;
 
 /* Defines routes and reacts to changes in route rendering corresponding app page */
 #[derive(PartialEq, Clone)]

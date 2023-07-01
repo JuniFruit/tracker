@@ -1,6 +1,7 @@
 mod app_list;
 mod basics;
 mod configs;
+mod modals;
 mod panels;
 mod router;
 mod utils;
@@ -8,14 +9,16 @@ mod utils;
 use self::{
     app_list::{AppList, NotTrackedAppList},
     configs::{configure_fonts, configure_text_styles, configure_visuals, get_win_options},
-    panels::{footer, header, side_menu},
+    modals::confirm_close_modal,
+    panels::{header, side_menu},
     router::{outlet, Routes},
 };
 
 use eframe::{
-    egui::{self, CentralPanel},
+    egui::{self, CentralPanel, Ui},
     run_native, App, CreationContext,
 };
+use tracker::init_data;
 
 /* Bootstrap file (entry point) of the app */
 
@@ -24,6 +27,8 @@ pub struct Main {
     current_route: Routes,
     tracked_apps: AppList,
     untracked_apps: NotTrackedAppList,
+    on_close_dialog_open: bool,
+    allow_close: bool,
 }
 
 impl Main {
@@ -37,6 +42,8 @@ impl Main {
             current_route: Routes::Home,
             tracked_apps: AppList::new(),
             untracked_apps: NotTrackedAppList::new(),
+            on_close_dialog_open: false,
+            allow_close: false,
         }
     }
 
@@ -50,13 +57,21 @@ impl App for Main {
         header(&ctx, frame, self);
         side_menu(ctx, self);
         CentralPanel::default().show(ctx, |ui| outlet(self, ui));
-        // footer(&ctx);
+
+        if self.on_close_dialog_open {
+            confirm_close_modal(ctx, self, frame);
+        }
     }
 
     fn save(&mut self, _storage: &mut dyn eframe::Storage) {}
+    fn on_close_event(&mut self) -> bool {
+        self.on_close_dialog_open = true;
+        self.allow_close
+    }
 }
 
 pub fn run_app() {
+    init_data();
     run_native(
         "App Tracker",
         get_win_options(),

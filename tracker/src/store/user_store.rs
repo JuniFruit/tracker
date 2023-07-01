@@ -23,7 +23,7 @@ impl Default for UserState {
 
 fn reducer(state: &mut UserState, msg: UserActions) {
     match msg {
-        UserActions::ChangeUsername => println!("Change username"),
+        UserActions::ChangeUsername(new_username) => println!("Change username"),
         _ => (),
     }
 }
@@ -32,10 +32,10 @@ pub fn use_user_store() -> MutexGuard<'static, Store<UserState, UserActions>> {
     USER_STORE.lock().unwrap()
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub enum UserActions {
     None,
-    ChangeUsername,
+    ChangeUsername(String),
 }
 
 impl ReducerMsg for UserActions {

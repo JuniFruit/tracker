@@ -2,6 +2,7 @@ use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use std::error::Error;
 use std::fs;
+use std::sync::mpsc::{self, Sender, TryRecvError};
 use std::{
     fs::File,
     thread,
@@ -9,6 +10,7 @@ use std::{
 };
 
 use crate::procs::enum_procs_by_name;
+use crate::store::apps_store::{use_apps_store, Actions};
 
 const STATS_PATH: &str = "./stats.json";
 
@@ -20,41 +22,75 @@ pub fn get_tracked_procs_by_user(username: &str) -> Result<Vec<TrackLog>, Box<dy
         .collect())
 }
 
-pub fn start_tracking<'a>(proc_name: &'a str, username: &str) {
+pub fn start_tracking<'a>(proc_name: &'a str) -> Sender<String> {
     println!("Started tracking: {}", &proc_name);
-    get_tracker_thread_for_proc(username, proc_name);
+    get_tracker_thread_for_proc(proc_name)
 }
 
-fn get_tracker_thread_for_proc(username: &str, proc_name: &str) {
-    let mut track_log = TrackLog::new(username, proc_name);
+fn get_tracker_thread_for_proc(proc_name: &str) -> Sender<String> {
+    let (rx, tx) = mpsc::channel();
+    let proc_name = proc_name.to_owned();
+
     thread::spawn(move || {
-        let interval = Duration::from_secs(20);
+        let interval = Duration::from_secs(5);
+        let mut elapsed: u64 = 0;
+
+        let mut procs = enum_procs_by_name().unwrap();
+        let mut target = procs.into_iter().find(|p| p.name() == proc_name);
+
+        let mut prev_time: Option<u64> = None;
+
+        let l = use_apps_store().selector().tracked_apps.len();
+
+        for i in 0..l {
+            if use_apps_store().selector().tracked_apps[i].process_name == proc_name {
+                prev_time = Some(use_apps_store().selector().tracked_apps[i].uptime.clone());
+                break;
+            }
+        }
+        println!("Prev time: {}", prev_time.unwrap());
+        let mut total_time: u64 = if prev_time.is_some() {
+            prev_time.unwrap()
+        } else if target.is_some() {
+            let t = target.as_ref().unwrap().get_time().unwrap().as_secs();
+            t
+        } else {
+            0
+        };
 
         loop {
-            let procs = enum_procs_by_name().unwrap();
-            let target = procs
-                .into_iter()
-                .find(|p| p.name() == track_log.process_name);
-
+            match tx.try_recv() {
+                Ok(_) | Err(TryRecvError::Disconnected) => {
+                    println!("Terminating tracking: {}", proc_name);
+                    break;
+                }
+                Err(TryRecvError::Empty) => {}
+            };
             if target.is_some() {
                 let proc = target.as_ref().unwrap();
                 if proc.is_active().unwrap_or(false) {
-                    track_log.set_uptime(proc.get_time().unwrap().as_secs());
-                    match track_log.save_to_file() {
-                        Ok(_) => (),
-                        Err(e) => eprintln!("Error saving data: {}", e),
-                    }
-                }
-            }
+                    use_apps_store()
+                        .dispatch(Actions::UpdateAppTime(proc_name.to_owned(), total_time));
+                };
+                if elapsed % 60 == 0 {
+                    use_apps_store().dispatch(Actions::SaveData(proc_name.to_owned()));
+                    procs = enum_procs_by_name().unwrap();
+                    target = procs.into_iter().find(|p| p.name() == proc_name);
+                };
+            } else {
+                println!(
+                    "Terminating tracking: {}. Process is no longer running",
+                    proc_name
+                );
+                break;
+            };
 
             thread::sleep(interval);
-            eprintln!(
-                "Process {} has been up for: {}m",
-                &track_log.process_name,
-                &track_log.uptime / 60
-            );
+            elapsed += interval.as_secs();
+            total_time += interval.as_secs();
         }
     });
+    rx
 }
 /// Returns locally saved stats in form of vector.
 fn get_stats_from_file() -> Result<Vec<TrackLog>, Box<dyn Error>> {
@@ -75,18 +111,20 @@ pub struct TrackLog {
     pub last_closed: SystemTime,
     pub last_opened: SystemTime,
     pub process_name: String,
-    path: String,
+    pub display_name: String,
+    pub is_active: bool,
 }
 
 impl TrackLog {
-    pub fn new(username: &str, proc_name: &str) -> Self {
+    pub fn new(username: &str, proc_name: &str, display_name: &str) -> Self {
         TrackLog {
             username: String::from(username),
             uptime: 0,
             last_closed: SystemTime::now(),
             last_opened: SystemTime::now(),
             process_name: String::from(proc_name),
-            path: STATS_PATH.to_string(),
+            display_name: display_name.to_owned(),
+            is_active: false,
         }
     }
 
@@ -98,7 +136,6 @@ impl TrackLog {
         self.uptime += seconds;
     }
 
-    // if tracking is implemented by getting values from win api
     pub fn set_uptime(&mut self, seconds: u64) {
         self.uptime = seconds;
     }
@@ -108,6 +145,16 @@ impl TrackLog {
     }
     pub fn set_last_closed(&mut self, timestamp: SystemTime) {
         self.last_closed = timestamp
+    }
+
+    pub fn delete_from_file(&self) -> Result<(), Box<dyn Error>> {
+        let mut prev_stats = get_stats_from_file()?;
+
+        prev_stats.retain(|log| log.process_name != self.process_name);
+        let serialized = serde_json::to_string_pretty(&prev_stats)?;
+        fs::write(STATS_PATH, serialized)?;
+
+        Ok(())
     }
 
     pub fn save_to_file(&self) -> Result<(), Box<dyn Error>> {
