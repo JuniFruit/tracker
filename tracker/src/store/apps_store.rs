@@ -180,6 +180,7 @@ fn reducer(state: &mut AppState, msg: Actions) {
                 }
             }
         }
+        Actions::CleanErrorMsg => state.error = None,
         Actions::None => (),
     };
 }
@@ -234,6 +235,7 @@ pub enum Actions {
     DeleteTrackedApp(String),
     SaveData(String),
     ResumeTrackingAll,
+    CleanErrorMsg,
     SaveAllData,
 }
 impl ReducerMsg for Actions {

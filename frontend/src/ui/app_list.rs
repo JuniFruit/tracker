@@ -1,5 +1,7 @@
+use std::rc::Rc;
+
 use eframe::{
-    egui::{Button, Label, Layout, RichText, ScrollArea, Separator, Ui, Vec2},
+    egui::{Button, Context, Label, Layout, RichText, ScrollArea, Separator, Ui, Vec2},
     emath::Align,
 };
 use tracker::{
@@ -13,6 +15,7 @@ use tracker::{
 use super::{
     basics::core_btn,
     configs::{ACCENT, ERROR_COLOR, HEADING_COLOR, SUB_HEADING_COLOR},
+    modals::confirm_modal,
     utils::format_time,
 };
 
@@ -59,11 +62,17 @@ impl AppListItem {
 /// Apps that our application is tracking. Added by user.
 pub struct AppList {
     list: Vec<AppListItem>,
+    on_delete_modal_open: bool,
+    app_to_delete: String,
 }
 
 impl AppList {
     pub fn new() -> Self {
-        Self { list: vec![] }
+        Self {
+            list: vec![],
+            on_delete_modal_open: false,
+            app_to_delete: String::new(),
+        }
     }
 
     pub fn render(&mut self, ui: &mut Ui) {
@@ -81,6 +90,10 @@ impl AppList {
             return;
         };
 
+        if self.on_delete_modal_open {
+            self.render_confirm_modal(ui.ctx())
+        }
+
         self.render_list(ui);
 
         ui.add_space(PADDING);
@@ -95,11 +108,35 @@ impl AppList {
         }
     }
 
-    fn render_list(&self, ui: &mut Ui) {
+    fn render_confirm_modal(&mut self, ctx: &Context) {
+        let text = format!(
+            "Are you sure you want to delete {} app. All data will be erased forever.",
+            self.app_to_delete
+        );
+
+        let modal_ptr: *mut bool = &mut self.on_delete_modal_open;
+
+        confirm_modal(
+            ctx,
+            &text,
+            || {
+                use_apps_store().dispatch(Actions::DeleteTrackedApp(self.app_to_delete.to_owned()));
+                unsafe {
+                    modal_ptr.write(false);
+                }
+            },
+            || unsafe {
+                modal_ptr.write(false);
+            },
+        )
+    }
+
+    fn render_list(&mut self, ui: &mut Ui) {
         ScrollArea::new([false, true]).show(ui, |ui| {
             for item in &self.list {
                 item.render(ui, |proc_name| {
-                    use_apps_store().dispatch(Actions::DeleteTrackedApp(proc_name));
+                    self.on_delete_modal_open = true;
+                    self.app_to_delete = proc_name;
                 });
 
                 ui.separator();

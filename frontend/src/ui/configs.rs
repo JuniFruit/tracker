@@ -12,11 +12,11 @@ use super::utils::shade_color;
 
 /* File with ui app configs and user configs structs */
 
-const FRAME_ROUNDING: Rounding = Rounding {
-    nw: 1.0,
-    ne: 1.0,
-    sw: 1.0,
-    se: 1.0,
+pub const FRAME_ROUNDING: Rounding = Rounding {
+    nw: 10.0,
+    ne: 10.0,
+    sw: 10.0,
+    se: 10.0,
 };
 
 pub const DEFAULT_SHADOW: Shadow = Shadow {
