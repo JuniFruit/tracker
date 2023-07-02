@@ -94,3 +94,9 @@ pub fn get_icon_img(ctx: &Context, icon: &ImgIcons, size: Option<f32>) -> Image 
     let icon = svg_icon(icon);
     Image::new(icon.texture_id(ctx), size)
 }
+
+pub fn input_field(ui: &mut Ui, label: &str, input: &mut String) -> Response {
+    ui.label(label);
+    ui.add_space(10.0);
+    ui.text_edit_singleline(input)
+}

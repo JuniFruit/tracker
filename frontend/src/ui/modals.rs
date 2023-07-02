@@ -1,12 +1,12 @@
 use eframe::{
-    egui::{self, Context, Layout},
+    egui::{self, Context, Frame, Layout},
     emath::{Align, Align2},
     epaint::Rounding,
 };
 use tracker::store::apps_store::{use_apps_store, Actions};
 
 use super::{
-    basics::core_btn,
+    basics::{core_btn, input_field},
     configs::{get_def_frame, ADDITIONAL_2, DEFAULT_SHADOW, ERROR_COLOR, FRAME_ROUNDING, MAIN_BG},
     utils::shade_color,
     Main,
@@ -37,12 +37,7 @@ pub fn confirm_modal(
     egui::Window::new("Confirm action")
         .resizable(false)
         .collapsible(false)
-        .frame(
-            get_def_frame(ctx)
-                .fill(shade_color(MAIN_BG.to_tuple(), 0.03))
-                .rounding(FRAME_ROUNDING)
-                .shadow(DEFAULT_SHADOW),
-        )
+        .frame(get_modal_frame(ctx))
         .show(ctx, |ui| {
             ui.with_layout(Layout::top_down(eframe::emath::Align::Center), |ui| {
                 ui.add_space(35.0);
@@ -67,12 +62,7 @@ pub fn error_modal(ctx: &Context, text: &str, on_confirm: impl FnOnce() -> ()) {
     egui::Window::new("Error")
         .resizable(false)
         .collapsible(false)
-        .frame(
-            get_def_frame(ctx)
-                .fill(shade_color(MAIN_BG.to_tuple(), 0.03))
-                .rounding(FRAME_ROUNDING)
-                .shadow(DEFAULT_SHADOW),
-        )
+        .frame(get_modal_frame(ctx))
         .show(ctx, |ui| {
             ui.with_layout(Layout::top_down(eframe::emath::Align::Center), |ui| {
                 ui.add_space(35.0);
@@ -87,4 +77,38 @@ pub fn error_modal(ctx: &Context, text: &str, on_confirm: impl FnOnce() -> ()) {
                 ui.add_space(35.0)
             })
         });
+}
+
+pub fn change_proc_name_modal(
+    ctx: &Context,
+    input: &mut String,
+    on_confirm: impl FnOnce(&mut String) -> (),
+) {
+    egui::Window::new("Change name")
+        .resizable(false)
+        .collapsible(false)
+        .frame(get_modal_frame(ctx))
+        .show(ctx, |ui| {
+            ui.with_layout(Layout::top_down(eframe::emath::Align::Center), |ui| {
+                ui.add_space(35.0);
+                ui.label("Change the name of a tracked process.");
+
+                input_field(ui, "Enter new name", input);
+
+                ui.add_space(10.0);
+
+                if core_btn(ui, ADDITIONAL_2, "Ok").clicked() {
+                    on_confirm(input);
+                }
+
+                ui.add_space(35.0)
+            })
+        });
+}
+
+fn get_modal_frame(ctx: &Context) -> Frame {
+    get_def_frame(ctx)
+        .fill(shade_color(MAIN_BG.to_tuple(), 0.03))
+        .rounding(FRAME_ROUNDING)
+        .shadow(DEFAULT_SHADOW)
 }

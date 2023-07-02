@@ -1,4 +1,5 @@
 pub mod process;
+pub mod user;
 
 use std::io::{Error, ErrorKind};
 use std::mem;
@@ -6,7 +7,7 @@ use std::result::Result;
 use winapi::shared::minwindef::DWORD;
 use winapi::shared::ntdef::FALSE;
 
-use crate::procs::process::Process;
+use crate::win_funcs::process::Process;
 
 use self::process::ProcessInfo;
 

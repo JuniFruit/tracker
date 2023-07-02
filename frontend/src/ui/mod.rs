@@ -1,4 +1,5 @@
 mod app_list;
+mod badges_page;
 mod basics;
 mod configs;
 mod modals;
@@ -15,7 +16,7 @@ use self::{
 };
 
 use eframe::{
-    egui::{self, CentralPanel, Ui},
+    egui::{self, CentralPanel},
     run_native, App, CreationContext,
 };
 use tracker::init_data;
@@ -23,7 +24,6 @@ use tracker::init_data;
 /* Bootstrap file (entry point) of the app */
 
 pub struct Main {
-    frames: u64,
     current_route: Routes,
     tracked_apps: AppList,
     untracked_apps: NotTrackedAppList,
@@ -38,7 +38,6 @@ impl Main {
         configure_visuals(&cc.egui_ctx);
 
         Main {
-            frames: 0,
             current_route: Routes::Home,
             tracked_apps: AppList::new(),
             untracked_apps: NotTrackedAppList::new(),

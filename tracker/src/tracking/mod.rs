@@ -1,16 +1,16 @@
+pub mod badges;
+
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use std::error::Error;
 use std::fs;
 use std::sync::mpsc::{self, Sender, TryRecvError};
-use std::{
-    fs::File,
-    thread,
-    time::{Duration, SystemTime},
-};
+use std::{fs::File, thread, time::Duration};
 
-use crate::procs::enum_procs_by_name;
 use crate::store::apps_store::{use_apps_store, Actions};
+use crate::win_funcs::enum_procs_by_name;
+
+use self::badges::Badge;
 
 const STATS_PATH: &str = "./stats.json";
 
@@ -48,7 +48,6 @@ fn get_tracker_thread_for_proc(proc_name: &str) -> Sender<String> {
                 break;
             }
         }
-        println!("Prev time: {}", prev_time.unwrap());
         let mut total_time: u64 = if prev_time.is_some() {
             prev_time.unwrap()
         } else if target.is_some() {
@@ -108,11 +107,9 @@ fn get_stats_from_file() -> Result<Vec<TrackLog>, Box<dyn Error>> {
 pub struct TrackLog {
     pub username: String,
     pub uptime: u64, // seconds
-    pub last_closed: SystemTime,
-    pub last_opened: SystemTime,
+    pub badges: Vec<Badge>,
     pub process_name: String,
     pub display_name: String,
-    pub is_active: bool,
 }
 
 impl TrackLog {
@@ -120,16 +117,10 @@ impl TrackLog {
         TrackLog {
             username: String::from(username),
             uptime: 0,
-            last_closed: SystemTime::now(),
-            last_opened: SystemTime::now(),
+            badges: vec![],
             process_name: String::from(proc_name),
             display_name: display_name.to_owned(),
-            is_active: false,
         }
-    }
-
-    pub fn set_process_name(&mut self, new_name: &str) {
-        self.process_name = String::from(new_name);
     }
 
     pub fn add_uptime(&mut self, seconds: u64) {
@@ -140,11 +131,8 @@ impl TrackLog {
         self.uptime = seconds;
     }
 
-    pub fn set_last_opened(&mut self, timestamp: SystemTime) {
-        self.last_opened = timestamp
-    }
-    pub fn set_last_closed(&mut self, timestamp: SystemTime) {
-        self.last_closed = timestamp
+    pub fn set_display_name(&mut self, new_name: &str) {
+        self.display_name = new_name.to_owned();
     }
 
     pub fn delete_from_file(&self) -> Result<(), Box<dyn Error>> {
@@ -173,8 +161,8 @@ impl TrackLog {
             let curr = &prev_stats[ind];
             if curr.process_name == self.process_name {
                 prev_stats[ind].set_uptime(self.uptime);
-                prev_stats[ind].set_last_closed(self.last_closed);
-                prev_stats[ind].set_last_opened(self.last_opened);
+                prev_stats[ind].set_display_name(&self.display_name);
+                prev_stats[ind].badges = self.badges.to_owned();
                 is_in_file = true;
                 break;
             } else {

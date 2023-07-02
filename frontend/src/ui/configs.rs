@@ -69,7 +69,7 @@ pub fn configure_visuals(ctx: &Context) {
         selection: Selection::default(),
         hyperlink_color: shade_color(ACCENT.to_tuple(), 0.05),
         faint_bg_color: shade_color(MAIN_BG.to_tuple(), 0.05),
-        extreme_bg_color: MAIN_BG,
+        extreme_bg_color: shade_color(MAIN_BG.to_tuple(), 0.1),
         code_bg_color: MAIN_BG,
         warn_fg_color: ADDITIONAL,
         error_fg_color: ERROR_COLOR,

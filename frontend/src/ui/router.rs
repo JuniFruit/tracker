@@ -7,7 +7,7 @@ use super::Main;
 pub enum Routes {
     Login,
     Home,
-    AppPage,
+    Badges,
     NotTrackedApps,
 }
 
@@ -15,7 +15,7 @@ pub fn outlet(app: &mut Main, ui: &mut Ui) {
     match &app.current_route {
         Routes::Login => (),
         Routes::Home => app.tracked_apps.render(ui),
-        Routes::AppPage => (),
+        Routes::Badges => (),
         Routes::NotTrackedApps => app.untracked_apps.render(ui),
     };
 }

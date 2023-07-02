@@ -7,8 +7,8 @@ use std::{
 };
 
 use crate::{
-    procs::{get_running_procs, process::ProcessInfo},
     tracking::{get_tracked_procs_by_user, start_tracking, TrackLog},
+    win_funcs::{get_running_procs, process::ProcessInfo},
 };
 
 use super::{user_store::use_user_store, ReducerMsg, Store};
@@ -40,9 +40,13 @@ fn reducer(state: &mut AppState, msg: Actions) {
             } else if state.tracked_tx.is_some() {
                 match state.tracked_tx.as_ref().unwrap().try_recv() {
                     Ok(data) => {
-                        state.tracked_apps = data;
-                        state.is_error_tracked = false;
+                        if data.len() == 0 {
+                            state.is_error_tracked = true;
+                        } else {
+                            state.is_error_tracked = false;
+                        }
                         state.is_fetching_tracked = false;
+                        state.tracked_apps = data;
                     }
                     Err(e) => {
                         if e == TryRecvError::Empty {
@@ -153,6 +157,20 @@ fn reducer(state: &mut AppState, msg: Actions) {
                 _ => eprintln!("Cannot update: {}. Not found.", proc_name),
             }
         }
+        Actions::ChangeTrackedAppName(proc_name, new_display_name) => {
+            let mut tracked_log: Option<&mut TrackLog> = None;
+
+            for ind in 0..state.tracked_apps.len() {
+                if state.tracked_apps[ind].process_name == proc_name {
+                    tracked_log = Some(&mut state.tracked_apps[ind]);
+                    break;
+                }
+            }
+            match tracked_log {
+                Some(log) => log.set_display_name(&new_display_name),
+                _ => eprintln!("Cannot change display name: {}. Not found", proc_name),
+            }
+        }
 
         Actions::ResumeTrackingAll => {
             if state.tracked_apps.len() == 0 {
@@ -225,6 +243,17 @@ pub fn use_apps_store() -> MutexGuard<'static, Store<AppState, Actions>> {
     APPS_STORE.lock().unwrap()
 }
 
+pub fn is_app_tracked(proc_name: &str) -> bool {
+    let len = use_apps_store().selector().tracked_apps.len();
+
+    for i in 0..len {
+        if use_apps_store().selector().tracked_apps[i].process_name == proc_name {
+            return true;
+        }
+    }
+    false
+}
+
 #[derive(Clone)]
 pub enum Actions {
     None,
@@ -237,6 +266,7 @@ pub enum Actions {
     ResumeTrackingAll,
     CleanErrorMsg,
     SaveAllData,
+    ChangeTrackedAppName(String, String),
 }
 impl ReducerMsg for Actions {
     type Value = Actions;

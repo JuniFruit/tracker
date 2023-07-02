@@ -5,7 +5,7 @@ use std::ptr::NonNull;
 use std::time::{Duration, SystemTime};
 use std::{io::Result, mem};
 use winapi::ctypes::c_void;
-use winapi::shared::minwindef::{DWORD, FILETIME, HMODULE, LPDWORD};
+use winapi::shared::minwindef::{DWORD, FILETIME, HMODULE};
 use winapi::shared::ntdef::FALSE;
 use winapi::um::minwinbase::STILL_ACTIVE;
 use winapi::um::winnt::{self, MEMORY_BASIC_INFORMATION};
