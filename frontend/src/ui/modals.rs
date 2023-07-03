@@ -1,7 +1,6 @@
 use eframe::{
     egui::{self, Context, Frame, Layout},
-    emath::{Align, Align2},
-    epaint::Rounding,
+    emath::Align,
 };
 use tracker::store::apps_store::{use_apps_store, Actions};
 
@@ -21,7 +20,10 @@ pub fn confirm_close_modal(ctx: &Context, app: &mut Main, frame: &mut eframe::Fr
         text,
         || {
             app.allow_close = true;
-            use_apps_store().dispatch(Actions::SaveAllData);
+            use_apps_store()
+                .lock()
+                .unwrap()
+                .dispatch(Actions::SaveAllData);
             frame.close()
         },
         || app.on_close_dialog_open = false,

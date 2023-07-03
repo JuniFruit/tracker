@@ -21,7 +21,11 @@ impl BadgesPage {
         ui.add(Separator::default().spacing(20.0));
 
         self.make_list();
-        let is_loading = use_apps_store().selector().is_fetching_tracked;
+        let is_loading = use_apps_store()
+            .lock()
+            .unwrap()
+            .selector()
+            .is_fetching_tracked;
         if is_loading {
             ui.layout().horizontal_align();
             ui.label("Loading");
@@ -35,9 +39,16 @@ impl BadgesPage {
     }
 
     fn make_list(&mut self) {
-        if use_apps_store().selector().tracked_apps.len() != self.list.len() {
+        if use_apps_store()
+            .lock()
+            .unwrap()
+            .selector()
+            .tracked_apps
+            .len()
+            != self.list.len()
+        {
             self.list = vec![];
-            for item in &use_apps_store().selector().tracked_apps {
+            for item in &use_apps_store().lock().unwrap().selector().tracked_apps {
                 AppItem::new(&item.display_name, item.badges.clone());
             }
         }

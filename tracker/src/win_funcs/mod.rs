@@ -53,7 +53,7 @@ pub fn enum_procs_by_name() -> std::io::Result<Vec<Process>> {
             Ok(mut proc) => {
                 match proc.get_proc_name() {
                     Ok(name) => {
-                        println!("Active process pid: {},named: {}", pid, name)
+                        // println!("Active process pid: {},named: {}", pid, name)
                     }
                     Err(e) => {
                         // eprintln!("Couldn't get process name with pid: {}.Reason: {}", pid, e)

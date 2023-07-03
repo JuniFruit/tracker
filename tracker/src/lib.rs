@@ -1,5 +1,6 @@
 use std::{thread, time::Duration};
 use store::{apps_store::Actions, user_store::UserActions};
+use tracking::start_supervisor_thread;
 
 use crate::store::{apps_store::use_apps_store, user_store::use_user_store};
 
@@ -19,15 +20,25 @@ pub fn init_data() {
         // fetch prev tracking data
         loop {
             if tries > 5
-                || use_apps_store().selector().is_error_tracked
-                || use_apps_store().selector().tracked_apps.len() > 0
+                || use_apps_store().lock().unwrap().selector().is_error_tracked
+                || use_apps_store()
+                    .lock()
+                    .unwrap()
+                    .selector()
+                    .tracked_apps
+                    .len()
+                    > 0
             {
                 break;
             }
-            use_apps_store().dispatch(Actions::FetchTrackedApps);
+            use_apps_store()
+                .lock()
+                .unwrap()
+                .dispatch(Actions::FetchTrackedApps);
             tries += 1;
             thread::sleep(Duration::from_secs(1));
         }
-        use_apps_store().dispatch(Actions::ResumeTrackingAll);
     });
+
+    start_supervisor_thread();
 }

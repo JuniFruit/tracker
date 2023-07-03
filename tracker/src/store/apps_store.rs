@@ -1,9 +1,9 @@
 use std::{
     sync::{
         mpsc::{channel, Receiver, Sender, TryRecvError},
-        Mutex, MutexGuard,
+        Arc, Mutex,
     },
-    thread::{self},
+    thread,
 };
 
 use crate::{
@@ -14,8 +14,8 @@ use crate::{
 use super::{user_store::use_user_store, ReducerMsg, Store};
 
 lazy_static! {
-    static ref APPS_STORE: Mutex<Store<AppState, Actions>> =
-        Mutex::new(Store::new(Box::new(reducer)));
+    static ref APPS_STORE: Arc<Mutex<Store<AppState, Actions>>> =
+        Arc::new(Mutex::new(Store::new(Box::new(reducer))));
 }
 
 #[derive(Default)]
@@ -97,25 +97,25 @@ fn reducer(state: &mut AppState, msg: Actions) {
                     break;
                 }
             }
+            /* Clean listener channel */
             if rx.is_some() {
-                if rx.unwrap().send("Terminate".to_owned()).is_err() {
-                    return;
-                } else {
-                    for i in 0..state.tracked_apps.len() {
-                        if state.tracked_apps[i].process_name == proc_name {
-                            match state.tracked_apps[i].delete_from_file() {
-                                Ok(_) => {
-                                    state.tracked_apps.remove(i);
-                                    break;
-                                }
-                                Err(e) => {
-                                    println!(
-                                        "Failed to delete track log {} from file. Reason: {}",
-                                        proc_name, e
-                                    );
-                                    break;
-                                }
-                            }
+                rx.unwrap().send("Terminate".to_owned());
+            };
+
+            /* Delete all data from file */
+            for i in 0..state.tracked_apps.len() {
+                if state.tracked_apps[i].process_name == proc_name {
+                    match state.tracked_apps[i].delete_from_file() {
+                        Ok(_) => {
+                            state.tracked_apps.remove(i);
+                            break;
+                        }
+                        Err(e) => {
+                            println!(
+                                "Failed to delete track log {} from file. Reason: {}",
+                                proc_name, e
+                            );
+                            break;
                         }
                     }
                 }
@@ -141,6 +141,7 @@ fn reducer(state: &mut AppState, msg: Actions) {
                 };
             }
         }
+
         Actions::UpdateAppTime(proc_name, secs) => {
             let mut tracked_log: Option<&mut TrackLog> = None;
 
@@ -172,17 +173,34 @@ fn reducer(state: &mut AppState, msg: Actions) {
             }
         }
 
-        Actions::ResumeTrackingAll => {
-            if state.tracked_apps.len() == 0 {
-                return;
-            };
-
+        Actions::PauseTracking(proc_name) => {
+            println!("Pause tracking: {}", proc_name);
+            /* Clear channel listener */
+            for ind in 0..state.channel_senders.len() {
+                if state.channel_senders[ind].proc_name == proc_name {
+                    state.channel_senders.remove(ind);
+                };
+            }
+            /* Update running status in tracklog for UI */
+            for ind in 0..state.tracked_apps.len() {
+                let app = &mut state.tracked_apps[ind];
+                if app.process_name == proc_name {
+                    app.is_running = false;
+                }
+            }
+        }
+        Actions::ResumeTracking(proc_name) => {
+            println!("Resume tracking: {}", proc_name);
             for i in 0..state.tracked_apps.len() {
-                let app = &state.tracked_apps[i];
-                let rx = start_tracking(&app.process_name);
-                state
-                    .channel_senders
-                    .push(ChannelSender::new(&app.process_name, rx))
+                let app = &mut state.tracked_apps[i];
+                if app.process_name == proc_name {
+                    let rx = start_tracking(&app.process_name);
+                    app.is_running = true;
+                    state
+                        .channel_senders
+                        .push(ChannelSender::new(&app.process_name, rx));
+                    break;
+                }
             }
         }
         Actions::SaveAllData => {
@@ -197,6 +215,9 @@ fn reducer(state: &mut AppState, msg: Actions) {
                     Err(e) => println!("Error saving data for {}. Reason:{}", app.process_name, e),
                 }
             }
+        }
+        Actions::QueryUntrackedApps => {
+            state.untracked_apps = get_running_procs().unwrap_or(vec![]);
         }
         Actions::CleanErrorMsg => state.error = None,
         Actions::None => (),
@@ -239,15 +260,20 @@ fn fetch_tracked_apps(state: &mut AppState) {
     state.is_error_tracked = false;
 }
 
-pub fn use_apps_store() -> MutexGuard<'static, Store<AppState, Actions>> {
-    APPS_STORE.lock().unwrap()
+pub fn use_apps_store() -> Arc<Mutex<Store<AppState, Actions>>> {
+    APPS_STORE.clone()
 }
 
 pub fn is_app_tracked(proc_name: &str) -> bool {
-    let len = use_apps_store().selector().tracked_apps.len();
+    let len = use_apps_store()
+        .lock()
+        .unwrap()
+        .selector()
+        .tracked_apps
+        .len();
 
     for i in 0..len {
-        if use_apps_store().selector().tracked_apps[i].process_name == proc_name {
+        if use_apps_store().lock().unwrap().selector().tracked_apps[i].process_name == proc_name {
             return true;
         }
     }
@@ -263,10 +289,12 @@ pub enum Actions {
     UpdateAppTime(String, u64),
     DeleteTrackedApp(String),
     SaveData(String),
-    ResumeTrackingAll,
     CleanErrorMsg,
     SaveAllData,
     ChangeTrackedAppName(String, String),
+    QueryUntrackedApps,
+    PauseTracking(String),
+    ResumeTracking(String),
 }
 impl ReducerMsg for Actions {
     type Value = Actions;

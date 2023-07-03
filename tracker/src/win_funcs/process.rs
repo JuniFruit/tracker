@@ -270,6 +270,7 @@ fn filetime_to_systemtime(filetime: &FILETIME) -> SystemTime {
     SystemTime::UNIX_EPOCH + duration
 }
 
+#[derive(Clone)]
 pub struct ProcessInfo {
     pub name: String,
     pub pid: u32,

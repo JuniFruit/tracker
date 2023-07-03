@@ -22,12 +22,13 @@ pub struct AppListItem {
     pub name: String,
     pub uptime: *const u64,
     pub display_name: String,
+    is_running: *const bool,
     on_edit_modal_open: bool,
     new_display_name: String,
 }
 
 impl AppListItem {
-    pub fn new(name: &str, uptime: &u64, display_name: &str) -> Self {
+    pub fn new(name: &str, uptime: &u64, display_name: &str, is_running: &bool) -> Self {
         Self {
             name: String::from(name),
             uptime,
@@ -38,6 +39,7 @@ impl AppListItem {
                 String::from(display_name)
             },
             new_display_name: display_name.to_owned(),
+            is_running,
         }
     }
 
@@ -47,7 +49,13 @@ impl AppListItem {
             ui.with_layout(Layout::top_down(Align::Min), |ui| {
                 ui.colored_label(HEADING_COLOR, format!("App: {}", &self.display_name));
                 ui.colored_label(
-                    SUB_HEADING_COLOR,
+                    unsafe {
+                        if *self.is_running {
+                            ACCENT
+                        } else {
+                            SUB_HEADING_COLOR
+                        }
+                    },
                     format!("Used for: {}", format_time(unsafe { *self.uptime })),
                 );
             })
@@ -81,10 +89,13 @@ impl AppListItem {
         change_proc_name_modal(ui.ctx(), &mut self.new_display_name, |input| {
             if input.trim() != "" && display_name != *input {
                 self.display_name = input.to_owned();
-                use_apps_store().dispatch(Actions::ChangeTrackedAppName(
-                    proc_name,
-                    self.display_name.to_owned(),
-                ));
+                use_apps_store()
+                    .lock()
+                    .unwrap()
+                    .dispatch(Actions::ChangeTrackedAppName(
+                        proc_name,
+                        self.display_name.to_owned(),
+                    ));
             };
             self.on_edit_modal_open = false;
         })
@@ -114,7 +125,11 @@ impl AppList {
         ui.add(Separator::default().spacing(20.0));
 
         self.make_list();
-        let is_loading = use_apps_store().selector().is_fetching_tracked;
+        let is_loading = use_apps_store()
+            .lock()
+            .unwrap()
+            .selector()
+            .is_fetching_tracked;
         if is_loading {
             ui.layout().horizontal_align();
             ui.label("Loading");
@@ -133,13 +148,21 @@ impl AppList {
         ui.add_space(PADDING);
     }
     fn make_list(&mut self) {
-        if use_apps_store().selector().tracked_apps.len() != self.list.len() {
+        if use_apps_store()
+            .lock()
+            .unwrap()
+            .selector()
+            .tracked_apps
+            .len()
+            != self.list.len()
+        {
             self.list = vec![];
-            for item in &use_apps_store().selector().tracked_apps {
+            for item in &use_apps_store().lock().unwrap().selector().tracked_apps {
                 self.list.push(AppListItem::new(
                     &item.process_name,
                     &item.uptime,
                     &item.display_name,
+                    &item.is_running,
                 ))
             }
         }
@@ -157,7 +180,10 @@ impl AppList {
             ctx,
             &text,
             || {
-                use_apps_store().dispatch(Actions::DeleteTrackedApp(self.app_to_delete.to_owned()));
+                use_apps_store()
+                    .lock()
+                    .unwrap()
+                    .dispatch(Actions::DeleteTrackedApp(self.app_to_delete.to_owned()));
                 unsafe {
                     modal_ptr.write(false);
                 }
@@ -258,39 +284,60 @@ impl NotTrackedAppList {
 
         self.use_load_data();
 
-        let is_loading = use_apps_store().selector().is_fetching_untracked;
+        let is_loading = use_apps_store()
+            .lock()
+            .unwrap()
+            .selector()
+            .is_fetching_untracked;
 
         if is_loading {
             ui.label("Loading");
-        } else if self.list.len() == 0 {
+        }
+        if self.list.len() == 0 {
             self.render_if_empty(ui);
-        };
-
-        self.render_list(ui);
+        } else {
+            self.render_list(ui);
+        }
 
         ui.add_space(PADDING);
     }
 
     fn use_load_data(&mut self) {
-        if use_apps_store().selector().untracked_apps.len() == 0 {
-            use_apps_store().dispatch(Actions::FetchUntrackedApps);
+        if use_apps_store()
+            .lock()
+            .unwrap()
+            .selector()
+            .untracked_apps
+            .len()
+            == 0
+        {
+            use_apps_store()
+                .lock()
+                .unwrap()
+                .dispatch(Actions::FetchUntrackedApps);
         } else {
             self.make_list()
         }
     }
 
     fn make_list(&mut self) {
-        if use_apps_store().selector().untracked_apps.len() == self.list.len() {
-            return;
+        if use_apps_store()
+            .lock()
+            .unwrap()
+            .selector()
+            .untracked_apps
+            .len()
+            != self.list.len()
+        {
+            self.list = vec![];
+            for item in &use_apps_store().lock().unwrap().selector().untracked_apps {
+                self.list.push(NotTrackedAppItem {
+                    name: item.name.clone(),
+                    is_added: false,
+                });
+            }
+            self.filter();
         }
-        self.list = vec![];
-        for item in &use_apps_store().selector().untracked_apps {
-            self.list.push(NotTrackedAppItem {
-                name: item.name.clone(),
-                is_added: false,
-            });
-        }
-        self.filter();
     }
 
     fn render_list(&self, ui: &mut Ui) {
@@ -298,10 +345,13 @@ impl NotTrackedAppList {
             for item in &self.filtered {
                 if item.is_some() {
                     item.as_ref().unwrap().render(ui, |proc_name| {
-                        use_apps_store().dispatch(Actions::AddTrackedApp(
-                            use_user_store().selector().username.to_owned(),
-                            proc_name,
-                        ))
+                        use_apps_store()
+                            .lock()
+                            .unwrap()
+                            .dispatch(Actions::AddTrackedApp(
+                                use_user_store().selector().username.to_owned(),
+                                proc_name,
+                            ))
                     });
                 };
             }
@@ -330,7 +380,7 @@ impl NotTrackedAppList {
         ui.vertical_centered_justified(|ui| {
             ui.add_space(40.0);
             ui.add(Label::new(
-                RichText::new("No apps found").color(SUB_HEADING_COLOR),
+                RichText::new("No apps running").color(SUB_HEADING_COLOR),
             ));
         });
     }

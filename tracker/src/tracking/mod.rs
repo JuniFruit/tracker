@@ -8,7 +8,6 @@ use std::sync::mpsc::{self, Sender, TryRecvError};
 use std::{fs::File, thread, time::Duration};
 
 use crate::store::apps_store::{use_apps_store, Actions};
-use crate::win_funcs::enum_procs_by_name;
 
 use self::badges::Badge;
 
@@ -24,70 +23,149 @@ pub fn get_tracked_procs_by_user(username: &str) -> Result<Vec<TrackLog>, Box<dy
 
 pub fn start_tracking<'a>(proc_name: &'a str) -> Sender<String> {
     println!("Started tracking: {}", &proc_name);
-    get_tracker_thread_for_proc(proc_name)
+    start_tracker_thread_for_proc(proc_name)
+}
+/// Every 5 sec query running processes and if the number is changed, check if need to start tracking a process
+pub fn start_supervisor_thread() {
+    thread::spawn(move || {
+        let interval = Duration::from_secs(3);
+        let mut prev_proc_num: u16 = 0;
+
+        loop {
+            use_apps_store()
+                .lock()
+                .unwrap()
+                .dispatch(Actions::QueryUntrackedApps);
+
+            thread::sleep(interval);
+
+            let proc_num = use_apps_store()
+                .lock()
+                .unwrap()
+                .selector()
+                .untracked_apps
+                .len() as u16;
+
+            if proc_num != prev_proc_num {
+                let mut untracked = use_apps_store()
+                    .lock()
+                    .unwrap()
+                    .selector()
+                    .untracked_apps
+                    .clone()
+                    .into_iter();
+                let tracked = use_apps_store()
+                    .lock()
+                    .unwrap()
+                    .selector()
+                    .tracked_apps
+                    .clone();
+
+                tracked.into_iter().for_each(|l| {
+                    if !l.is_running {
+                        let is_restarted = &untracked.find(|p| p.name == l.process_name).is_some();
+                        println!("Proc: {}, is restarted: {}", l.process_name, *is_restarted);
+
+                        if *is_restarted {
+                            use_apps_store()
+                                .lock()
+                                .unwrap()
+                                .dispatch(Actions::ResumeTracking(l.process_name.to_owned()))
+                        }
+                    }
+                });
+
+                prev_proc_num = proc_num;
+            }
+        }
+    });
 }
 
-fn get_tracker_thread_for_proc(proc_name: &str) -> Sender<String> {
+fn start_tracker_thread_for_proc(proc_name: &str) -> Sender<String> {
     let (rx, tx) = mpsc::channel();
     let proc_name = proc_name.to_owned();
 
     thread::spawn(move || {
+        fn check_is_proc_running(proc_name: &str) -> bool {
+            use_apps_store()
+                .lock()
+                .unwrap()
+                .selector()
+                .untracked_apps
+                .clone()
+                .into_iter()
+                .find(|p| p.name == proc_name)
+                .is_some()
+        }
+
         let interval = Duration::from_secs(5);
         let mut elapsed: u64 = 0;
 
-        let mut procs = enum_procs_by_name().unwrap();
-        let mut target = procs.into_iter().find(|p| p.name() == proc_name);
+        let store = use_apps_store().to_owned();
+        let mut prev_proc_num = store.lock().unwrap().selector().untracked_apps.len() as u16;
 
-        let mut prev_time: Option<u64> = None;
+        /* check if process was added earlier  */
+        let stored_data = store
+            .lock()
+            .unwrap()
+            .selector()
+            .tracked_apps
+            .clone()
+            .into_iter()
+            .find(|p| p.process_name == proc_name);
 
-        let l = use_apps_store().selector().tracked_apps.len();
-
-        for i in 0..l {
-            if use_apps_store().selector().tracked_apps[i].process_name == proc_name {
-                prev_time = Some(use_apps_store().selector().tracked_apps[i].uptime.clone());
-                break;
-            }
-        }
-        let mut total_time: u64 = if prev_time.is_some() {
-            prev_time.unwrap()
-        } else if target.is_some() {
-            let t = target.as_ref().unwrap().get_time().unwrap().as_secs();
-            t
-        } else {
+        let mut total_time: u64 = if stored_data.is_none() {
             0
+        } else {
+            let t = stored_data.as_ref().unwrap();
+            t.uptime
         };
 
+        let mut is_running = check_is_proc_running(&proc_name);
+
         loop {
+            let proc_num = store.lock().unwrap().selector().untracked_apps.len() as u16;
+
+            if prev_proc_num != proc_num {
+                is_running = check_is_proc_running(&proc_name);
+                prev_proc_num = proc_num;
+            }
+            /* Check if user terminated tracking (deleted by user) */
             match tx.try_recv() {
                 Ok(_) | Err(TryRecvError::Disconnected) => {
-                    println!("Terminating tracking: {}", proc_name);
+                    println!("User is no longer tracking: {}", proc_name);
                     break;
                 }
                 Err(TryRecvError::Empty) => {}
             };
-            if target.is_some() {
-                let proc = target.as_ref().unwrap();
-                if proc.is_active().unwrap_or(false) {
-                    use_apps_store()
-                        .dispatch(Actions::UpdateAppTime(proc_name.to_owned(), total_time));
-                };
-                if elapsed % 60 == 0 {
-                    use_apps_store().dispatch(Actions::SaveData(proc_name.to_owned()));
-                    procs = enum_procs_by_name().unwrap();
-                    target = procs.into_iter().find(|p| p.name() == proc_name);
-                };
+            /* Save uptime if process is still running else save and break */
+            if is_running {
+                store
+                    .lock()
+                    .unwrap()
+                    .dispatch(Actions::UpdateAppTime(proc_name.to_owned(), total_time));
             } else {
-                println!(
-                    "Terminating tracking: {}. Process is no longer running",
-                    proc_name
-                );
+                store
+                    .lock()
+                    .unwrap()
+                    .dispatch(Actions::PauseTracking(proc_name.to_owned()));
+                store
+                    .lock()
+                    .unwrap()
+                    .dispatch(Actions::SaveData(proc_name.to_owned()));
                 break;
+            }
+            if elapsed % 60 == 0 {
+                store
+                    .lock()
+                    .unwrap()
+                    .dispatch(Actions::SaveData(proc_name.to_owned()));
             };
-
             thread::sleep(interval);
             elapsed += interval.as_secs();
             total_time += interval.as_secs();
         }
+        println!("Tracking thread for: {} terminated", proc_name);
     });
     rx
 }
@@ -110,6 +188,7 @@ pub struct TrackLog {
     pub badges: Vec<Badge>,
     pub process_name: String,
     pub display_name: String,
+    pub is_running: bool,
 }
 
 impl TrackLog {
@@ -120,6 +199,7 @@ impl TrackLog {
             badges: vec![],
             process_name: String::from(proc_name),
             display_name: display_name.to_owned(),
+            is_running: true, // assumes when we create track log, process is running in sys
         }
     }
 
@@ -163,6 +243,7 @@ impl TrackLog {
                 prev_stats[ind].set_uptime(self.uptime);
                 prev_stats[ind].set_display_name(&self.display_name);
                 prev_stats[ind].badges = self.badges.to_owned();
+                prev_stats[ind].is_running = false;
                 is_in_file = true;
                 break;
             } else {
