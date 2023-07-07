@@ -6,7 +6,7 @@ use tracker::store::apps_store::{use_apps_store, Actions};
 
 use super::{
     basics::{core_btn, input_field},
-    configs::{get_def_frame, ADDITIONAL_2, DEFAULT_SHADOW, ERROR_COLOR, FRAME_ROUNDING, MAIN_BG},
+    configs::{get_def_frame, ADDITIONAL_2, DEFAULT_SHADOW, FRAME_ROUNDING, MAIN_BG},
     utils::shade_color,
     Main,
 };
@@ -51,27 +51,6 @@ pub fn confirm_modal(
                     };
 
                     if core_btn(ui, ADDITIONAL_2, "Yes").clicked() {
-                        on_confirm();
-                    };
-                });
-
-                ui.add_space(35.0)
-            })
-        });
-}
-
-pub fn error_modal(ctx: &Context, text: &str, on_confirm: impl FnOnce() -> ()) {
-    egui::Window::new("Error")
-        .resizable(false)
-        .collapsible(false)
-        .frame(get_modal_frame(ctx))
-        .show(ctx, |ui| {
-            ui.with_layout(Layout::top_down(eframe::emath::Align::Center), |ui| {
-                ui.add_space(35.0);
-                ui.label(text);
-                ui.add_space(20.0);
-                ui.with_layout(ui.layout().with_main_align(Align::Center), |ui| {
-                    if core_btn(ui, ERROR_COLOR, "Yes").clicked() {
                         on_confirm();
                     };
                 });

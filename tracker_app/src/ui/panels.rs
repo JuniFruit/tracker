@@ -10,7 +10,7 @@ use super::Main;
 
 /* Ui that persists across the pages of the app. Header, footer and custom widow styles */
 
-pub fn header(ctx: &Context, frame: &mut eframe::Frame, app: &mut Main) {
+pub fn header(ctx: &Context, frame: &mut eframe::Frame) {
     TopBottomPanel::top("header_bar").show(&ctx, |ui| {
         title_bar_ui(ui, frame, "App Tracker");
     });

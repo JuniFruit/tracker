@@ -6,7 +6,6 @@ use crate::store::{apps_store::use_apps_store, user_store::use_user_store};
 
 pub mod store;
 pub mod tracking;
-mod utils;
 pub mod win_funcs;
 
 #[macro_use]

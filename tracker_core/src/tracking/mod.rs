@@ -4,7 +4,6 @@ use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use std::error::Error;
 use std::fs;
-use std::ops::DerefMut;
 use std::sync::mpsc::{self, Sender, TryRecvError};
 use std::{fs::File, thread, time::Duration};
 

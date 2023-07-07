@@ -56,7 +56,7 @@ impl Main {
 
 impl App for Main {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        header(&ctx, frame, self);
+        header(&ctx, frame);
         side_menu(ctx, self);
         CentralPanel::default().show(ctx, |ui| outlet(self, ui));
 
