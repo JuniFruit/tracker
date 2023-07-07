@@ -2,7 +2,7 @@ use eframe::{
     egui::{Context, Label, Layout, RichText, ScrollArea, Separator, Ui},
     emath::Align,
 };
-use tracker::store::{
+use tracker_core::store::{
     apps_store::{use_apps_store, Actions},
     user_store::use_user_store,
 };
@@ -131,7 +131,6 @@ impl AppList {
             .selector()
             .is_fetching_tracked;
         if is_loading {
-            ui.layout().horizontal_align();
             ui.label("Loading");
             return;
         } else if self.list.len() == 0 {

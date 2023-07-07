@@ -2,7 +2,7 @@ use eframe::{
     egui::{self, Context, Frame, Layout},
     emath::Align,
 };
-use tracker::store::apps_store::{use_apps_store, Actions};
+use tracker_core::store::apps_store::{use_apps_store, Actions};
 
 use super::{
     basics::{core_btn, input_field},

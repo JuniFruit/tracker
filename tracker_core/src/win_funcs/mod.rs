@@ -3,9 +3,12 @@ pub mod user;
 
 use std::io::{Error, ErrorKind};
 use std::mem;
+use std::ptr;
 use std::result::Result;
 use winapi::shared::minwindef::DWORD;
 use winapi::shared::ntdef::FALSE;
+use winapi::um::wincon::GetConsoleWindow;
+use winapi::um::winuser::{ShowWindow, SW_HIDE};
 
 use crate::win_funcs::process::Process;
 
@@ -75,4 +78,13 @@ pub fn enum_procs_by_name() -> std::io::Result<Vec<Process>> {
         ));
     }
     return Ok(processes);
+}
+
+pub fn hide_console_window() {
+    let window = unsafe { GetConsoleWindow() };
+    if window != ptr::null_mut() {
+        unsafe {
+            ShowWindow(window, SW_HIDE);
+        }
+    }
 }

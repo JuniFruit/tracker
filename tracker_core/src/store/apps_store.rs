@@ -250,7 +250,7 @@ fn fetch_untracked_apps(state: &mut AppState) {
             };
         }
         Err(e) => {
-            eprint!("Couldn't get running processes: {}", e)
+            eprint!("Couldn't get running processes: {}", e);
         }
     });
     state.untracked_tx = Some(tx);
@@ -269,6 +269,9 @@ fn fetch_tracked_apps(state: &mut AppState) {
             }
             Err(e) => {
                 eprintln!("Couldn't get tracked processes: {}", e);
+                if let Err(e) = rx.send(vec![]) {
+                    eprint!("Error sending Tracked AppList: {}", e);
+                };
             }
         },
     );

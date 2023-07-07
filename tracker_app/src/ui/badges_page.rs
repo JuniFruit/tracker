@@ -2,7 +2,7 @@ use eframe::{
     egui::{Label, Layout, RichText, ScrollArea, Separator, Ui},
     emath::Align,
 };
-use tracker::{
+use tracker_core::{
     store::apps_store::use_apps_store,
     tracking::badges::{Badge, BadgeRank},
 };
