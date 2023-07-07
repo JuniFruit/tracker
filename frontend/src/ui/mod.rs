@@ -9,6 +9,7 @@ mod utils;
 
 use self::{
     app_list::{AppList, NotTrackedAppList},
+    badges_page::BadgesPage,
     configs::{configure_fonts, configure_text_styles, configure_visuals, get_win_options},
     modals::confirm_close_modal,
     panels::{header, side_menu},
@@ -27,6 +28,7 @@ pub struct Main {
     current_route: Routes,
     tracked_apps: AppList,
     untracked_apps: NotTrackedAppList,
+    badges_page: BadgesPage,
     on_close_dialog_open: bool,
     allow_close: bool,
 }
@@ -41,6 +43,7 @@ impl Main {
             current_route: Routes::Home,
             tracked_apps: AppList::new(),
             untracked_apps: NotTrackedAppList::new(),
+            badges_page: BadgesPage::new(),
             on_close_dialog_open: false,
             allow_close: false,
         }

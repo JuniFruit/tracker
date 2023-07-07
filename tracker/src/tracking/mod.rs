@@ -4,10 +4,13 @@ use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use std::error::Error;
 use std::fs;
+use std::ops::DerefMut;
 use std::sync::mpsc::{self, Sender, TryRecvError};
 use std::{fs::File, thread, time::Duration};
 
 use crate::store::apps_store::{use_apps_store, Actions};
+use crate::store::user_store::use_user_store;
+use crate::tracking::badges::get_badge;
 
 use self::badges::Badge;
 
@@ -25,13 +28,14 @@ pub fn start_tracking<'a>(proc_name: &'a str) -> Sender<String> {
     println!("Started tracking: {}", &proc_name);
     start_tracker_thread_for_proc(proc_name)
 }
-/// Every 5 sec query running processes and if the number is changed, check if need to start tracking a process
+/// Query running processes and if the number is changed, check if need to start tracking a process
 pub fn start_supervisor_thread() {
     thread::spawn(move || {
         let interval = Duration::from_secs(3);
         let mut prev_proc_num: u16 = 0;
 
         loop {
+            // Query and update store with currently running procs
             use_apps_store()
                 .lock()
                 .unwrap()
@@ -46,14 +50,14 @@ pub fn start_supervisor_thread() {
                 .untracked_apps
                 .len() as u16;
 
+            // Check if any of tracked procs launched to resume tracking
             if proc_num != prev_proc_num {
-                let mut untracked = use_apps_store()
+                let untracked = use_apps_store()
                     .lock()
                     .unwrap()
                     .selector()
                     .untracked_apps
-                    .clone()
-                    .into_iter();
+                    .clone();
                 let tracked = use_apps_store()
                     .lock()
                     .unwrap()
@@ -63,16 +67,18 @@ pub fn start_supervisor_thread() {
 
                 tracked.into_iter().for_each(|l| {
                     if !l.is_running {
-                        let is_restarted = &untracked.find(|p| p.name == l.process_name).is_some();
-                        println!("Proc: {}, is restarted: {}", l.process_name, *is_restarted);
+                        let is_restarted = untracked
+                            .iter()
+                            .find(|p| p.name == l.process_name)
+                            .is_some();
 
-                        if *is_restarted {
+                        if is_restarted {
                             use_apps_store()
                                 .lock()
                                 .unwrap()
                                 .dispatch(Actions::ResumeTracking(l.process_name.to_owned()))
                         }
-                    }
+                    };
                 });
 
                 prev_proc_num = proc_num;
@@ -138,7 +144,7 @@ fn start_tracker_thread_for_proc(proc_name: &str) -> Sender<String> {
                 }
                 Err(TryRecvError::Empty) => {}
             };
-            /* Save uptime if process is still running else save and break */
+            /* Save uptime if process is still running, else save and break */
             if is_running {
                 store
                     .lock()
@@ -155,12 +161,25 @@ fn start_tracker_thread_for_proc(proc_name: &str) -> Sender<String> {
                     .dispatch(Actions::SaveData(proc_name.to_owned()));
                 break;
             }
-            if elapsed % 60 == 0 {
+            if elapsed % 120 == 0 {
                 store
                     .lock()
                     .unwrap()
                     .dispatch(Actions::SaveData(proc_name.to_owned()));
             };
+
+            /* Check badges */
+            if elapsed % 300 == 0 {
+                let badge = get_badge(total_time, &use_user_store().selector().username);
+
+                if badge.is_some() {
+                    store.lock().unwrap().dispatch(Actions::AddBadgeToProc(
+                        badge.unwrap(),
+                        proc_name.to_owned(),
+                    ));
+                }
+            }
+
             thread::sleep(interval);
             elapsed += interval.as_secs();
             total_time += interval.as_secs();

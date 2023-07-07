@@ -3,13 +3,13 @@ use eframe::{
     emath::Align,
 };
 use tracker::store::{
-    apps_store::{is_app_tracked, use_apps_store, Actions},
+    apps_store::{use_apps_store, Actions},
     user_store::use_user_store,
 };
 
 use super::{
     basics::{core_btn, input_field},
-    configs::{ACCENT, ADDITIONAL_2, ERROR_COLOR, HEADING_COLOR, MAIN_BG, SUB_HEADING_COLOR},
+    configs::{ACCENT, ADDITIONAL_2, ERROR_COLOR, HEADING_COLOR, SUB_HEADING_COLOR},
     modals::{change_proc_name_modal, confirm_modal},
     utils::format_time,
 };
@@ -277,6 +277,12 @@ impl NotTrackedAppList {
                 if input_field(ui, "Search", &mut self.search_term).changed() {
                     self.filter()
                 }
+                ui.add_space(15.0);
+                ui.label(
+                    RichText::new(format!("opened {} apps", self.list.len()))
+                        .size(10.0)
+                        .color(SUB_HEADING_COLOR),
+                );
             });
             ui.add_space(5.0);
             ui.separator();

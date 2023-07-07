@@ -15,7 +15,7 @@ pub fn outlet(app: &mut Main, ui: &mut Ui) {
     match &app.current_route {
         Routes::Login => (),
         Routes::Home => app.tracked_apps.render(ui),
-        Routes::Badges => (),
+        Routes::Badges => app.badges_page.render(ui),
         Routes::NotTrackedApps => app.untracked_apps.render(ui),
     };
 }

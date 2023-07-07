@@ -27,7 +27,6 @@ pub const DEFAULT_SHADOW: Shadow = Shadow {
 pub const MAIN_TEXT_COLOR: Color32 = Color32::from_rgb(255, 255, 255);
 pub const HEADING_COLOR: Color32 = Color32::from_rgb(255, 255, 255); // White
 pub const SUB_HEADING_COLOR: Color32 = Color32::from_rgb(143, 143, 143); // Grey
-pub const BTN_TEXT: Color32 = HEADING_COLOR;
 pub const ACCENT: Color32 = Color32::from_rgb(253, 121, 73); // Orange-fire;
 pub const COMPLIMENTARY: Color32 = Color32::from_rgb(252, 127, 73); // Yellow;
 pub const ADDITIONAL: Color32 = Color32::from_rgb(66, 108, 255); //Bluish;

@@ -1,4 +1,4 @@
-use eframe::{egui::Margin, epaint::Color32};
+use eframe::epaint::Color32;
 
 /// returns [`Color32`] shade of the rgb color.
 /// Param factor specifies intesity of a shade. Range between -1 <= 0 <= 1;
@@ -23,26 +23,6 @@ pub fn shade_color(rgb: (u8, u8, u8, u8), factor: f32) -> Color32 {
     }
 
     Color32::from_rgb(r as u8, g as u8, b as u8)
-}
-
-/// Returns [`Margin`] with left and right values specified.
-pub fn get_mx(left: f32, right: f32) -> Margin {
-    Margin {
-        left,
-        right,
-        top: 0.0,
-        bottom: 0.0,
-    }
-}
-
-/// Returns [`Margin`] with top and bottom values specified.
-pub fn get_my(top: f32, bottom: f32) -> Margin {
-    Margin {
-        left: 0.0,
-        right: 0.0,
-        top,
-        bottom,
-    }
 }
 
 pub fn format_time(secs: u64) -> String {

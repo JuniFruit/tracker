@@ -1,4 +1,5 @@
 use std::{
+    borrow::Borrow,
     sync::{
         mpsc::{channel, Receiver, Sender, TryRecvError},
         Arc, Mutex,
@@ -7,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    tracking::{get_tracked_procs_by_user, start_tracking, TrackLog},
+    tracking::{badges::Badge, get_tracked_procs_by_user, start_tracking, TrackLog},
     win_funcs::{get_running_procs, process::ProcessInfo},
 };
 
@@ -139,6 +140,22 @@ fn reducer(state: &mut AppState, msg: Actions) {
                         }
                     }
                 };
+            }
+        }
+        Actions::AddBadgeToProc(badge, proc_name) => {
+            let mut log: Option<&mut TrackLog> = None;
+
+            for i in 0..state.tracked_apps.len() {
+                if state.tracked_apps[i].process_name == proc_name {
+                    log = Some(&mut state.tracked_apps[i]);
+                    break;
+                }
+            }
+            let log = log.unwrap();
+            let is_added = log.badges.iter().find(|b| b.rank == badge.rank).is_some();
+
+            if !is_added {
+                log.badges.push(badge);
             }
         }
 
@@ -295,6 +312,7 @@ pub enum Actions {
     QueryUntrackedApps,
     PauseTracking(String),
     ResumeTracking(String),
+    AddBadgeToProc(Badge, String),
 }
 impl ReducerMsg for Actions {
     type Value = Actions;

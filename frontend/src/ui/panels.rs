@@ -3,7 +3,7 @@ use eframe::egui::{self, Context, Id, Label, RichText, Sense, SidePanel, TopBott
 use eframe::emath::{Align, Align2};
 use eframe::epaint::FontId;
 
-use super::basics::{get_icon_img, text_small_button, ImgIcons};
+use super::basics::text_small_button;
 use super::configs::{get_def_frame, ACCENT, SUB_HEADING_COLOR};
 use super::router::Routes;
 use super::Main;
@@ -17,15 +17,13 @@ pub fn header(ctx: &Context, frame: &mut eframe::Frame, app: &mut Main) {
 }
 
 struct SideMenuItem {
-    icon: ImgIcons,
     title: String,
     route: Routes,
 }
 
 impl SideMenuItem {
-    fn new(icon: ImgIcons, title: &str, route: Routes) -> Self {
+    fn new(title: &str, route: Routes) -> Self {
         Self {
-            icon,
             title: String::from(title),
             route,
         }
@@ -37,7 +35,6 @@ impl SideMenuItem {
 
         ui.horizontal(|ui| {
             ui.add_space(5.0);
-            ui.add(get_icon_img(ui.ctx(), &self.icon, Some(20.0)).bg_fill(color));
             let nav_btn = ui
                 .add(
                     Label::new(RichText::new(&self.title).size(20.0).color(color))
@@ -57,10 +54,10 @@ impl SideMenuItem {
 }
 
 pub fn side_menu(ctx: &Context, app: &mut Main) {
-    let side_menu_data: [SideMenuItem; 2] = [
-        SideMenuItem::new(ImgIcons::HomeIcon, "Home", Routes::Home),
-        // SideMenuItem::new(ImgIcons::HomeIcon, "List", Routes::AppPage),
-        SideMenuItem::new(ImgIcons::HomeIcon, "Apps", Routes::NotTrackedApps),
+    let side_menu_data: [SideMenuItem; 3] = [
+        SideMenuItem::new("Home", Routes::Home),
+        SideMenuItem::new("Badges", Routes::Badges),
+        SideMenuItem::new("Apps", Routes::NotTrackedApps),
     ];
 
     SidePanel::new(Side::Left, "side_menu")
