@@ -47,7 +47,7 @@ pub fn get_badge(elapsed_secs: u64, username: &str) -> Option<Badge> {
         1000 => {
             rank = Some(BadgeRank::Lunatic);
             description.push_str(
-                "You've been using app one thousand hours. You know everything about this app.",
+                "You've been using app for one thousand hours. You know everything about this app.",
             );
         }
         3000 => {
