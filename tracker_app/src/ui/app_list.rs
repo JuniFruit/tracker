@@ -354,7 +354,12 @@ impl NotTrackedAppList {
                             .lock()
                             .unwrap()
                             .dispatch(Actions::AddTrackedApp(
-                                use_user_store().selector().username.to_owned(),
+                                use_user_store()
+                                    .lock()
+                                    .unwrap()
+                                    .selector()
+                                    .username
+                                    .to_owned(),
                                 proc_name,
                             ))
                     });
