@@ -20,7 +20,7 @@ use eframe::{
     egui::{self, CentralPanel},
     run_native, App, CreationContext,
 };
-use tracker_core::{init_data, mac_funcs::hide_console_window};
+use tracker_core::init_data;
 
 /* Bootstrap file (entry point) of the app */
 
