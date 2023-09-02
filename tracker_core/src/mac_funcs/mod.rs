@@ -3,9 +3,7 @@ pub mod user;
 
 use std::result::Result;
 
-use sysinfo::{
-    CpuExt, NetworkExt, NetworksExt, Pid, PidExt, ProcessExt, Signal, System, SystemExt, UserExt,
-};
+use sysinfo::{PidExt, ProcessExt, System, SystemExt};
 
 use self::process::ProcessInfo;
 
