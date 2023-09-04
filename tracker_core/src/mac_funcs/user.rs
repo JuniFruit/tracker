@@ -1,9 +1,8 @@
-use crate::mac_funcs::process::child_stream_to_vec;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 /// Get current logon username
 pub fn get_username() -> std::io::Result<String> {
-    let mut child_proc = Command::new("id").arg("-un").spawn().unwrap();
-    let out = child_stream_to_vec(child_proc.stdout.take().expect("!stdout"));
-    Ok(String::from_utf8(out).unwrap())
+    let mut child_proc_output = Command::new("whoami").stdout(Stdio::piped()).output()?;
+
+    Ok(String::from_utf8(child_proc_output.stdout).unwrap_or(String::from("Guest")))
 }
