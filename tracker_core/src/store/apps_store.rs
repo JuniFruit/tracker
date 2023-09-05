@@ -1,5 +1,4 @@
 use std::{
-    borrow::Borrow,
     sync::{
         mpsc::{channel, Receiver, Sender, TryRecvError},
         Arc, Mutex,
@@ -260,8 +259,8 @@ fn fetch_untracked_apps(state: &mut AppState) {
 
 fn fetch_tracked_apps(state: &mut AppState) {
     let (rx, tx) = channel();
-    thread::spawn(
-        move || match get_tracked_procs_by_user(&use_user_store().selector().username) {
+    thread::spawn(move || {
+        match get_tracked_procs_by_user(&use_user_store().lock().unwrap().selector().username) {
             Ok(tracked_procs) => {
                 if let Err(e) = rx.send(tracked_procs) {
                     eprintln!("Error sending Tracked AppList: {}", e);
@@ -273,8 +272,8 @@ fn fetch_tracked_apps(state: &mut AppState) {
                     eprint!("Error sending Tracked AppList: {}", e);
                 };
             }
-        },
-    );
+        }
+    });
     state.tracked_tx = Some(tx);
     state.is_fetching_tracked = true;
     state.is_error_tracked = false;
