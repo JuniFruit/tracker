@@ -1,12 +1,12 @@
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 
 use crate::mac_funcs::user::get_username;
 
 use super::{ReducerMsg, Store};
 
 lazy_static! {
-    static ref USER_STORE: Mutex<Store<UserState, UserActions>> =
-        Mutex::new(Store::new(Box::new(reducer)));
+    static ref USER_STORE: Arc<Mutex<Store<UserState, UserActions>>> =
+        Arc::new(Mutex::new(Store::new(Box::new(reducer))));
 }
 
 pub struct UserState {
@@ -17,7 +17,7 @@ pub struct UserState {
 impl Default for UserState {
     fn default() -> Self {
         UserState {
-            username: "".to_string(),
+            username: "Guest".to_string(),
             is_logged: false,
         }
     }
@@ -60,8 +60,8 @@ fn reducer(state: &mut UserState, msg: UserActions) {
     }
 }
 
-pub fn use_user_store() -> MutexGuard<'static, Store<UserState, UserActions>> {
-    USER_STORE.lock().unwrap()
+pub fn use_user_store() -> Arc<Mutex<Store<UserState, UserActions>>> {
+    USER_STORE.clone()
 }
 
 #[derive(Clone)]
