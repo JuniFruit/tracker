@@ -3,7 +3,7 @@ pub mod badges;
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use std::error::Error;
-use std::fs::{self, OpenOptions};
+use std::fs::{self};
 use std::sync::mpsc::{self, Sender, TryRecvError};
 use std::{fs::File, thread, time::Duration};
 
@@ -17,6 +17,7 @@ const STATS_PATH: &str = "./stats.json";
 
 pub fn get_tracked_procs_by_user(username: &str) -> Result<Vec<TrackLog>, Box<dyn Error>> {
     let procs = get_stats_from_file()?;
+
     Ok(procs
         .into_iter()
         .filter(|p| p.username == username)
@@ -169,7 +170,10 @@ fn start_tracker_thread_for_proc(proc_name: &str) -> Sender<String> {
 
             /* Check badges */
             if elapsed % 300 == 0 {
-                let badge = get_badge(total_time, &use_user_store().selector().username);
+                let badge = get_badge(
+                    total_time,
+                    &use_user_store().lock().unwrap().selector().username,
+                );
 
                 if badge.is_some() {
                     store.lock().unwrap().dispatch(Actions::AddBadgeToProc(
@@ -189,9 +193,10 @@ fn start_tracker_thread_for_proc(proc_name: &str) -> Sender<String> {
 }
 /// Returns locally saved stats in form of vector.
 fn get_stats_from_file() -> Result<Vec<TrackLog>, Box<dyn Error>> {
-    OpenOptions::new().create_new(true).open(STATS_PATH)?;
+    File::open(STATS_PATH)?;
 
     let data = fs::read_to_string(STATS_PATH).expect("Unable to read file");
+
     let mut stats: Vec<TrackLog> = Vec::new();
     if data.trim().len() != 0 {
         stats = serde_json::from_str::<Vec<TrackLog>>(&data)?;
