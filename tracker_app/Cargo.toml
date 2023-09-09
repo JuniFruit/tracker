@@ -3,10 +3,22 @@ name = "tracker_app"
 version = "0.1.0"
 edition = "2021"
 
- 
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[package.metadata.bundle]
+name = "Tracker"
+identifier = "com.doe.tracker_app"
+icon = ["32x32.png", "128x128.png", "128x128@2x.png"]
+version = "1.0.0"
+resources = ["assets", "fonts/*.otf"]
+copyright = "Copyright (c) Artyom Nebyansky Doe 2023. All rights reserved."
+category = "User Tool"
+short_description = "Track your progress in any application."
+deb_depends = ["libgl1-mesa-glx", "libsdl2-2.0-0 (>= 2.0.5)"]
+osx_frameworks = ["SDL2"]
+osx_url_schemes = ["com.doe.tracker_app"]
 
 [dependencies]
 eframe = "0.22.0"
-egui_extras = {version ="0.22.0", features=["svg"]}
-tracker_core = {path = "../tracker_core"}
+egui_extras = { version = "0.22.0", features = ["svg"] }
+tracker_core = { path = "../tracker_core" }
