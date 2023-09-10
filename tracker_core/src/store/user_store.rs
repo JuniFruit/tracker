@@ -1,6 +1,6 @@
 use std::sync::{Mutex, MutexGuard};
 
-use crate::win_funcs::user::get_username;
+use crate::mac_funcs::user::get_username;
 
 use super::{ReducerMsg, Store};
 

@@ -8,8 +8,8 @@ use std::{
 };
 
 use crate::{
+    mac_funcs::{get_running_procs, process::ProcessInfo},
     tracking::{badges::Badge, get_tracked_procs_by_user, start_tracking, TrackLog},
-    win_funcs::{get_running_procs, process::ProcessInfo},
 };
 
 use super::{user_store::use_user_store, ReducerMsg, Store};

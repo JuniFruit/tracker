@@ -20,7 +20,7 @@ use eframe::{
     egui::{self, CentralPanel},
     run_native, App, CreationContext,
 };
-use tracker_core::{init_data, win_funcs::hide_console_window};
+use tracker_core::{init_data, mac_funcs::hide_console_window};
 
 /* Bootstrap file (entry point) of the app */
 
@@ -74,7 +74,7 @@ impl App for Main {
 
 pub fn run_app() {
     init_data();
-    hide_console_window();
+    // hide_console_window();
     run_native(
         "App Tracker",
         get_win_options(),

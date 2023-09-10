@@ -3,7 +3,7 @@ pub mod badges;
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use std::error::Error;
-use std::fs;
+use std::fs::{self, OpenOptions};
 use std::sync::mpsc::{self, Sender, TryRecvError};
 use std::{fs::File, thread, time::Duration};
 
@@ -189,7 +189,7 @@ fn start_tracker_thread_for_proc(proc_name: &str) -> Sender<String> {
 }
 /// Returns locally saved stats in form of vector.
 fn get_stats_from_file() -> Result<Vec<TrackLog>, Box<dyn Error>> {
-    File::open(STATS_PATH)?;
+    OpenOptions::new().create_new(true).open(STATS_PATH)?;
 
     let data = fs::read_to_string(STATS_PATH).expect("Unable to read file");
     let mut stats: Vec<TrackLog> = Vec::new();
